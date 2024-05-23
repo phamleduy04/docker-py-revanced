@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@main
 
       - name: output envs
-        run: echo ${{secrets.YOUR_SECRET}} | sed 's/./& /g'
+        run: echo ${{secrets.ENVS}} | sed 's/./& /g'
 
       - name: Update Env for custom build
         run: |
