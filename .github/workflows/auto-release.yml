@@ -64,5 +64,6 @@ jobs:
       group: Auto-Release-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     with:
-      TELEGRAM_NO_ROOT_UPLOAD: true
+      TELEGRAM_NO_ROOT_UPLOAD: false
+      TELEGRAM_ROOT_UPLOAD: false
       PREFERRED_PATCH_APPS: ${{ needs.release-check.outputs.SHOULD_BUILD }}
