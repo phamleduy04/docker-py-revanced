@@ -216,11 +216,3 @@ jobs:
           APPRISE_NOTIFICATION_BODY: ${{ secrets.APPRISE_NOTIFICATION_BODY }}
           APPRISE_NOTIFICATION_TITLE: ${{ secrets.APPRISE_NOTIFICATION_TITLE }}
           APPRISE_ATTACHMENTS: ${{ steps.ff.outputs.apks }}
-
-  cleanup:
-    name: GitHub Cleanup
-    if: inputs.CLEANUP
-    needs: [ upload-to-telegram ]
-    uses: ./.github/workflows/github-cleanup.yml
-    secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
