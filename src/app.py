@@ -133,6 +133,7 @@ class APP(object):
         if not file_name:
             extension = pathlib.Path(url).suffix
             file_name = APP.generate_filename(url) + extension
+        print(f"Downloading {url} to {file_name}")
         Downloader(config).direct_download(url, file_name)
         return tag, file_name
 
