@@ -21,7 +21,6 @@ class Parser(object):
     APK_ARG = "-a"
     NEW_APK_ARG = "patch"
     PATCHES_ARG = "-b"
-    INTEGRATIONS_ARG = "-m"
     OUTPUT_ARG = "-o"
     KEYSTORE_ARG = "--keystore"
     OPTIONS_ARG = "--options"
@@ -178,8 +177,6 @@ class Parser(object):
             app.download_file_name,
             self.PATCHES_ARG,
             app.resource["patches"]["file_name"],
-            self.INTEGRATIONS_ARG,
-            app.resource["integrations"]["file_name"],
             self.OUTPUT_ARG,
             app.get_output_file_name(),
             self.KEYSTORE_ARG,
