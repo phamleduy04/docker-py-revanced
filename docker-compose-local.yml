@@ -9,3 +9,6 @@ services:
       - .env
     volumes:
       - .:/app:z
+    extra_hosts:
+      - "www.apkmirror.com:23.239.4.230"
+      - "apkmirror.com:23.239.4.230"
