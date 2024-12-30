@@ -48,6 +48,7 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           should_build=$(python check_resource_updates.py)
           echo "SHOULD_BUILD=$should_build" >> $GITHUB_OUTPUT
