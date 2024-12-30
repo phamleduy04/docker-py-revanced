@@ -31,14 +31,15 @@ class Parser(object):
         self.config = config
 
     def include(self: Self, name: str) -> None:
-        """The function `include` adds a given patch to a list of patches.
+        """
+        The function `include` adds a given patch to the front of a list of patches.
 
         Parameters
         ----------
         name : str
             The `name` parameter is a string that represents the name of the patch to be included.
         """
-        self._PATCHES.extend(["-e", name])
+        self._PATCHES[:0] = ["-e", name]
 
     def exclude(self: Self, name: str) -> None:
         """The `exclude` function adds a given patch to the list of excluded patches.
@@ -84,11 +85,10 @@ class Parser(object):
         """
         try:
             name = name.lower().replace(" ", "-")
-            patch_index = self._PATCHES.index(name)
             indices = [i for i in range(len(self._PATCHES)) if self._PATCHES[i] == name]
             for patch_index in indices:
                 if self._PATCHES[patch_index - 1] == "-e":
-                    self._PATCHES[patch_index - 1] = "-i"
+                    self._PATCHES[patch_index - 1] = "-d"
                 else:
                     self._PATCHES[patch_index - 1] = "-e"
         except ValueError:
@@ -99,8 +99,10 @@ class Parser(object):
     def exclude_all_patches(self: Self) -> None:
         """The function `exclude_all_patches` exclude all the patches."""
         for idx, item in enumerate(self._PATCHES):
-            if item == "-i":
-                self._PATCHES[idx] = "-e"
+            if idx == 0:
+                continue
+            if item == "-e":
+                self._PATCHES[idx] = "-d"
 
     def include_exclude_patch(
         self: Self,
@@ -134,11 +136,6 @@ class Parser(object):
             for patch in patches_dict["universal_patch"]:
                 self.include(patch["name"]) if patch["name"] in app.include_request else ()
 
-    @staticmethod
-    def is_new_cli() -> bool:
-        """Check if new cli is being used."""
-        return True
-
     # noinspection IncorrectFormatting
     def patch_app(
         self: Self,
@@ -152,13 +149,8 @@ class Parser(object):
             The `app` parameter is an instance of the `APP` class. It represents an application that needs
         to be patched.
         """
-        is_new = self.is_new_cli()
-        if is_new:
-            apk_arg = self.NEW_APK_ARG
-            exp = "--force"
-        else:
-            apk_arg = self.APK_ARG
-            exp = "--experimental"
+        apk_arg = self.NEW_APK_ARG
+        exp = "--force"
         args = [
             self.CLI_JAR,
             app.resource["cli"]["file_name"],
@@ -173,9 +165,7 @@ class Parser(object):
             self.OPTIONS_ARG,
             app.options_file,
         ]
-        if app.experiment:
-            logger.debug("Using experimental features")
-            args.append(exp)
+        args.append(exp)
         args[1::2] = map(self.config.temp_folder.joinpath, args[1::2])
         if app.old_key:
             # https://github.com/ReVanced/revanced-cli/issues/272#issuecomment-1740587534
