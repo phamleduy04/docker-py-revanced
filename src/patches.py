@@ -97,7 +97,7 @@ class Patches(object):
             a string, which is the package name corresponding to the given app name.
         """
         for package, app_name in Patches.revanced_package_names.items():
-            if app_name == app:
+            if app_name.upper() == app.upper():
                 return package
         msg = f"App {app} not supported officially yet. Please provide package name in env to proceed."
         raise AppNotFoundError(msg)
