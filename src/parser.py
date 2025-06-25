@@ -24,6 +24,9 @@ class Parser(object):
     OUTPUT_ARG = "-o"
     KEYSTORE_ARG = "--keystore"
     OPTIONS_ARG = "-O"
+    ENABLE_ARG = "-e"
+    DISABLE_ARG = "-d"
+    EXCLUSIVE_ARG = "--exclusive"
 
     def __init__(self: Self, patcher: Patches, config: RevancedConfig) -> None:
         self._PATCHES: list[str] = []
@@ -71,7 +74,7 @@ class Parser(object):
             for opt in options:
                 pair = self.format_option(opt)
                 self._PATCHES[:0] = [self.OPTIONS_ARG, pair]
-        self._PATCHES[:0] = ["-e", name]
+        self._PATCHES[:0] = [self.ENABLE_ARG, name]
 
     def exclude(self: Self, name: str) -> None:
         """The `exclude` function adds a given patch to the list of excluded patches.
@@ -81,7 +84,7 @@ class Parser(object):
         name : str
             The `name` parameter is a string that represents the name of the patch to be excluded.
         """
-        self._PATCHES.extend(["-d", name])
+        self._PATCHES.extend([self.DISABLE_ARG, name])
         self._EXCLUDED.append(name)
 
     def get_excluded_patches(self: Self) -> list[str]:
@@ -119,22 +122,27 @@ class Parser(object):
             name = name.lower().replace(" ", "-")
             indices = [i for i in range(len(self._PATCHES)) if self._PATCHES[i] == name]
             for patch_index in indices:
-                if self._PATCHES[patch_index - 1] == "-e":
-                    self._PATCHES[patch_index - 1] = "-d"
+                if self._PATCHES[patch_index - 1] == self.ENABLE_ARG:
+                    self._PATCHES[patch_index - 1] = self.DISABLE_ARG
                 else:
-                    self._PATCHES[patch_index - 1] = "-e"
+                    self._PATCHES[patch_index - 1] = self.ENABLE_ARG
         except ValueError:
             return False
         else:
             return True
 
-    def exclude_all_patches(self: Self) -> None:
-        """The function `exclude_all_patches` exclude all the patches."""
-        for idx, item in enumerate(self._PATCHES):
-            if idx == 0:
-                continue
-            if item == "-e":
-                self._PATCHES[idx] = "-d"
+    def enable_exclusive_mode(self: Self) -> None:
+        """Enable exclusive mode - only explicitly enabled patches will run, all others disabled by default."""
+        logger.info("Enabling exclusive mode for fast testing - only keeping one patch enabled.")
+        # Clear all patches and keep only the first one enabled
+        if self._PATCHES:
+            # Find the first enable argument and its patch name
+            for idx in range(0, len(self._PATCHES), 2):
+                if idx < len(self._PATCHES) and self._PATCHES[idx] == self.ENABLE_ARG and idx + 1 < len(self._PATCHES):
+                    first_patch = self._PATCHES[idx + 1]
+                    # Clear all patches and set only the first one
+                    self._PATCHES = [self.ENABLE_ARG, first_patch]
+                    break
 
     def fetch_patch_options(self: Self, name: str, options_list: list[dict[str, Any]]) -> dict[str, Any]:
         """The function `fetch_patch_options` finds patch options for the patch.
@@ -199,6 +207,55 @@ class Parser(object):
             for patch in patches_dict["universal_patch"]:
                 self.include(patch["name"], options_list) if patch["name"] in app.include_request else ()
 
+    def _build_base_args(self: Self, app: APP) -> list[str]:
+        """Build base arguments for ReVanced CLI."""
+        return [
+            self.CLI_JAR,
+            app.resource["cli"]["file_name"],
+            self.NEW_APK_ARG,
+            app.download_file_name,
+        ]
+
+    def _add_patch_bundles(self: Self, args: list[str], app: APP) -> None:
+        """Add patch bundle arguments to the command."""
+        if hasattr(app, "patch_bundles") and app.patch_bundles:
+            # Use multiple -p arguments for multiple bundles
+            for bundle in app.patch_bundles:
+                args.extend([self.PATCHES_ARG, bundle["file_name"]])
+        else:
+            # Fallback to single bundle for backward compatibility
+            args.extend([self.PATCHES_ARG, app.resource["patches"]["file_name"]])
+
+    def _add_output_and_keystore_args(self: Self, args: list[str], app: APP) -> None:
+        """Add output file and keystore arguments."""
+        args.extend(
+            [
+                self.OUTPUT_ARG,
+                app.get_output_file_name(),
+                self.KEYSTORE_ARG,
+                app.keystore_name,
+                "--force",
+            ],
+        )
+
+    def _add_keystore_flags(self: Self, args: list[str], app: APP) -> None:
+        """Add keystore-specific flags if needed."""
+        if app.old_key:
+            # https://github.com/ReVanced/revanced-cli/issues/272#issuecomment-1740587534
+            old_key_flags = [
+                "--keystore-entry-alias=alias",
+                "--keystore-entry-password=ReVanced",
+                "--keystore-password=ReVanced",
+            ]
+            args.extend(old_key_flags)
+
+    def _add_architecture_args(self: Self, args: list[str], app: APP) -> None:
+        """Add architecture-specific arguments."""
+        if app.app_name in self.config.rip_libs_apps:
+            excluded = set(possible_archs) - set(app.archs_to_build)
+            for arch in excluded:
+                args.extend(("--rip-lib", arch))
+
     # noinspection IncorrectFormatting
     def patch_app(
         self: Self,
@@ -212,39 +269,23 @@ class Parser(object):
             The `app` parameter is an instance of the `APP` class. It represents an application that needs
         to be patched.
         """
-        apk_arg = self.NEW_APK_ARG
-        exp = "--force"
-        args = [
-            self.CLI_JAR,
-            app.resource["cli"]["file_name"],
-            apk_arg,
-            app.download_file_name,
-            self.PATCHES_ARG,
-            app.resource["patches"]["file_name"],
-            self.OUTPUT_ARG,
-            app.get_output_file_name(),
-            self.KEYSTORE_ARG,
-            app.keystore_name,
-            exp,
-        ]
-        args[1::2] = map(self.config.temp_folder.joinpath, args[1::2])
-        if app.old_key:
-            # https://github.com/ReVanced/revanced-cli/issues/272#issuecomment-1740587534
-            old_key_flags = [
-                "--keystore-entry-alias=alias",
-                "--keystore-entry-password=ReVanced",
-                "--keystore-password=ReVanced",
-            ]
-            args.extend(old_key_flags)
+        args = self._build_base_args(app)
+        self._add_patch_bundles(args, app)
+        self._add_output_and_keystore_args(args, app)
+
+        # Convert paths to absolute paths
+        args[1::2] = [str(self.config.temp_folder.joinpath(arg)) for arg in args[1::2]]
+
+        self._add_keystore_flags(args, app)
+
         if self.config.ci_test:
-            self.exclude_all_patches()
+            self.enable_exclusive_mode()
         if self._PATCHES:
             args.extend(self._PATCHES)
-        if app.app_name in self.config.rip_libs_apps:
-            excluded = set(possible_archs) - set(app.archs_to_build)
-            for arch in excluded:
-                args.extend(("--rip-lib", arch))
+
+        self._add_architecture_args(args, app)
         args.extend(("--purge",))
+
         start = perf_counter()
         logger.debug(f"Sending request to revanced cli for building with args java {args}")
         process = Popen(["java", *args], stdout=PIPE)
