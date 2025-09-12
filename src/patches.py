@@ -82,6 +82,15 @@ class Patches(object):
         "de.stocard.stocard": "stocard",
         "at.willhaben": "willhaben",
         "ch.protonmail.android": "proton-mail",
+        "com.amazon.avod.thirdpartyclient": "prime-video",
+        "com.cricbuzz.android": "cricbuzz",
+        "com.crunchyroll.crunchyroid": "crunchyroll",
+        "com.instagram.barcelona": "threads",
+        "com.nousguide.android.orftvthek": "orf-on",
+        "com.pandora.android": "pandora",
+        "it.ipzs.cieid": "cieid",
+        "ml.docilealligator.infinityforreddit.patreon": "infinity-for-reddit-patreon",
+        "ml.docilealligator.infinityforreddit.plus": "infinity-for-reddit-plus",
     }
 
     @staticmethod

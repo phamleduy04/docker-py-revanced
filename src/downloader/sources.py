@@ -89,4 +89,13 @@ apk_sources = {
     "stocard": f"{APK_MIRROR_BASE_APK_URL}/stocard-gmbh/stocard-rewards-cards-wallet/",
     "willhaben": f"{APK_MIRROR_BASE_APK_URL}/willhaben/willhaben/",
     "proton-mail": f"{APK_MIRROR_BASE_APK_URL}/proton-technologies-ag/protonmail-encrypted-email/",
+    "prime-video": f"{APK_MIRROR_BASE_APK_URL}/amazon-mobile-llc/amazon-prime-video/",
+    "cricbuzz": f"{APK_MIRROR_BASE_APK_URL}/cricbuzz-com/cricbuzz-live-cricket-scores-news/",
+    "crunchyroll": f"{APK_MIRROR_BASE_APK_URL}/crunchyroll-llc-2/crunchyroll/",
+    "threads": f"{APK_MIRROR_BASE_APK_URL}/instagram/threads-an-instagram-app/",
+    "orf-on": f"{APK_MIRROR_BASE_APK_URL}/orf-osterreichischer-rundfunk/orf-tvthek-video-on-demand-android-tv/",
+    "pandora": f"{APK_MIRROR_BASE_APK_URL}/pandora/pandora-music-podcasts/",
+    "cieid": f"{APK_MIRROR_BASE_APK_URL}/istituto-poligrafico-e-zecca-dello-stato-s-p-a/cieid/",
+    "infinity-for-reddit-patreon": f"{APK_MIRROR_BASE_APK_URL}/docile-alligator/infinity-for-reddit-patreon-github-version/",  # noqa: E501
+    "infinity-for-reddit-plus": f"{APK_MIRROR_BASE_APK_URL}/docile-alligator/infinity-for-reddit-plus/",
 }
