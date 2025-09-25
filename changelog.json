@@ -1,1 +1,26 @@
-{}
+{
+    "ReVanced/GmsCore": {
+        "ResourceName": "[ReVanced/GmsCore](https://github.com/ReVanced/GmsCore/releases/tag/v0.3.1.4.240913)",
+        "Version": "v0.3.1.4.240913",
+        "Changelog": "# Download\r\n\r\n| Default | Huawei |\r\n| -------- | -------- |\r\n| [Download](https://github.com/ReVanced/GmsCore/releases/download/v0.3.1.4.240913/app.revanced.android.gms-240913008-signed.apk) |  [Download](https://github.com/ReVanced/GmsCore/releases/download/v0.3.1.4.240913/app.revanced.android.gms-240913008-hw-signed.apk) |\r\n",
+        "PublishedOn": "2024-04-05T02:37:11Z"
+    },
+    "REAndroid/APKEditor": {
+        "ResourceName": "[REAndroid/APKEditor](https://github.com/REAndroid/APKEditor/releases/tag/V1.4.5)",
+        "Version": "V1.4.5",
+        "Changelog": "## What's Changed\r\n* Minor improvement on dex building performance\r\n* Fix dex container building issues\r\n* Fix smali parsing #198 \r\n* Update README @yonggamer in https://github.com/REAndroid/APKEditor/pull/203\r\n\r\n\r\n**Full Changelog**: https://github.com/REAndroid/APKEditor/compare/V1.4.4...V1.4.5",
+        "PublishedOn": "2025-08-13T20:00:41Z"
+    },
+    "revanced/revanced-cli": {
+        "ResourceName": "[revanced/revanced-cli](https://github.com/ReVanced/revanced-cli/releases/tag/v5.0.1)",
+        "Version": "v5.0.1",
+        "Changelog": "## [5.0.1](https://github.com/ReVanced/revanced-cli/compare/v5.0.0...v5.0.1) (2025-04-14)\n\n\n### Bug Fixes\n\n* Make mounting work again by bumping dependencies ([#359](https://github.com/ReVanced/revanced-cli/issues/359)) ([68a4872](https://github.com/ReVanced/revanced-cli/commit/68a48724ebf01a0c8f8adc0fec63037bff672dc9))\n\n\n\n",
+        "PublishedOn": "2025-04-14T08:53:52Z"
+    },
+    "revanced/revanced-patches": {
+        "ResourceName": "[revanced/revanced-patches](https://github.com/ReVanced/revanced-patches/releases/tag/v5.40.0)",
+        "Version": "v5.40.0",
+        "Changelog": "# [5.40.0](https://github.com/ReVanced/revanced-patches/compare/v5.39.0...v5.40.0) (2025-09-21)\r\n\r\n\r\n### Bug Fixes\r\n\r\n* **Spoof video streams:** Resolve occasional playback stuttering ([5c7c8b5](https://github.com/ReVanced/revanced-patches/commit/5c7c8b536416ec53cd98f7d59d11850aa1b70f11))\r\n\r\n\r\n### Features\r\n\r\n* **Instagram:** Add `Limit feed to followed profiles` patch ([#5908](https://github.com/ReVanced/revanced-patches/issues/5908)) ([8ba9a19](https://github.com/ReVanced/revanced-patches/commit/8ba9a19ade24c5fe9bd6d4e49772b7663522780e))\r\n* **Viber - Hide ads:** Support latest app target ([#5863](https://github.com/ReVanced/revanced-patches/issues/5863)) ([e6cce85](https://github.com/ReVanced/revanced-patches/commit/e6cce8554116df3c0ea6dbb7440c59c9e73d8334))\r\n* **YouTube - Hide video action buttons:** Add \"Hide comments\" button ([db796fb](https://github.com/ReVanced/revanced-patches/commit/db796fb8830b813e1ed626d491c4a797171e69e7))\r\n* **YouTube Music:** Add `Enable debugging` patch ([#5939](https://github.com/ReVanced/revanced-patches/issues/5939)) ([418f594](https://github.com/ReVanced/revanced-patches/commit/418f5945c213313f9a77cac9a5c326d89c754dfd))\r\n* **YouTube Music:** Add `Hide cast button` and `Navigation bar` patches ([#5934](https://github.com/ReVanced/revanced-patches/issues/5934)) ([651d358](https://github.com/ReVanced/revanced-patches/commit/651d3580967a252b57cbf4afbba02d6a4601ccfe))\r\n* **YouTube Music:** Support version `8.10.52` ([#5941](https://github.com/ReVanced/revanced-patches/issues/5941)) ([01c0f1b](https://github.com/ReVanced/revanced-patches/commit/01c0f1bd1ac6edb8aea758f88ffffcdea74a29b7))\r\n* **YouTube:** Support version `20.14.43` ([#5940](https://github.com/ReVanced/revanced-patches/issues/5940)) ([f7f4a1b](https://github.com/ReVanced/revanced-patches/commit/f7f4a1b0f0186598266b41a2c6a781fdee49e440))\r\n\r\n\r\n\r\n",
+        "PublishedOn": "2025-09-21T06:59:19Z"
+    }
+}
