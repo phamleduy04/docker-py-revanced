@@ -1,7 +1,6 @@
 """Github Manager."""
 
 import json
-import os
 import urllib.request
 from pathlib import Path
 from typing import Self
@@ -22,27 +21,32 @@ class GitHubManager(ReleaseManager):
             branch_name=branch_name,
             updates_file=updates_file,
         )
+        self.is_dry_run = env.bool("DRY_RUN", False)
 
-    def get_last_version(self: Self, app: APP, resource_name: str) -> str:
+    def get_last_version(self: Self, app: APP, resource_name: str) -> str | list[str]:
         """Get last patched version."""
-        if os.getenv("DRY_RUN", default=None):
+        if self.is_dry_run:
             with Path(updates_file).open() as url:
                 data = json.load(url)
         else:
             with urllib.request.urlopen(self.update_file_url) as url:
                 data = json.load(url)
-        if data.get(app.app_name):
-            return str(data[app.app_name][resource_name])
+        if app.app_name in data and (resource := data[app.app_name].get(resource_name)):
+            if isinstance(resource, list):
+                return resource
+            return str(resource)
         return "0"
 
-    def get_last_version_source(self: Self, app: APP, resource_name: str) -> str:
+    def get_last_version_source(self: Self, app: APP, resource_name: str) -> str | list[str]:
         """Get last patched version."""
-        if os.getenv("DRY_RUN", default=None):
+        if self.is_dry_run:
             with Path(updates_file).open() as url:
                 data = json.load(url)
         else:
             with urllib.request.urlopen(self.update_file_url) as url:
                 data = json.load(url)
-        if data.get(app.app_name):
-            return str(data[app.app_name][app_dump_key][resource_name])
+        if app.app_name in data and (resource := data[app.app_name][app_dump_key].get(resource_name)):
+            if isinstance(resource, list):
+                return resource
+            return str(resource)
         return "0"
