@@ -10,9 +10,9 @@ steps:
   - name: build-apk
     image: python:3-slim
     environment:
-      - DOCKER_BUILDKIT=1
-      - COMPOSE_DOCKER_CLI_BUILD=1
-      - GITHUB_REPOSITORY=${CI_REPO}
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1
+      GITHUB_REPOSITORY: ${CI_REPO}
     secrets:
       - source: envs
         target: ENVS
