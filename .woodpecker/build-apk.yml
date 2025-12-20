@@ -2,10 +2,6 @@ when:
   - event: [push, manual, cron]
     branch: main
 
-variables:
-  - &docker_buildkit "DOCKER_BUILDKIT=1"
-  - &compose_docker_cli "COMPOSE_DOCKER_CLI_BUILD=1"
-
 steps:
   - name: build-apk
     image: python:3-slim
@@ -13,13 +9,12 @@ steps:
       DOCKER_BUILDKIT: 1
       COMPOSE_DOCKER_CLI_BUILD: 1
       GITHUB_REPOSITORY: ${CI_REPO}
-    secrets:
-      - source: envs
-        target: ENVS
-      - source: docker_py_revanced_secrets
-        target: DOCKER_PY_REVANCED_SECRETS
-      - source: reddit_client_id
-        target: REDDIT_CLIENT_ID
+      ENVS:
+        from_secret: envs
+      DOCKER_PY_REVANCED_SECRETS:
+        from_secret: docker_py_revanced_secrets
+      REDDIT_CLIENT_ID:
+        from_secret: reddit_client_id
     commands:
       # Checkout is automatic in Woodpecker
 
@@ -72,7 +67,8 @@ steps:
           echo "$updated_json" > "$path"
         fi
 
-      # Build Revanced APKs
+      # Build Revanced APKs using Docker
+      # Note: Docker socket needs to be available on the agent
       - |
         if [ "$CI_PIPELINE_FORGE_PARAMS_CI_TEST" = "true" ]; then
           echo "In CI Testing. Using local compose file."
@@ -81,8 +77,7 @@ steps:
           echo "Using Prod compose file."
           docker compose up --build
         fi
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
     when:
       evaluate: 'CI_PIPELINE_FORGE_PARAMS_DEBUG_ENABLED != "true"'
 
@@ -105,6 +100,9 @@ steps:
 
   - name: commit-changelog
     image: alpine/git
+    environment:
+      GIT_TOKEN:
+        from_secret: github_token
     commands:
       - git config user.name "Woodpecker CI"
       - git config user.email "ci@woodpecker-ci.org"
@@ -112,14 +110,18 @@ steps:
       - git add changelog.md changelog.json updates.json
       - git commit -m "🚀New Build" || echo "No changes to commit"
       - git push -f origin changelogs
-    secrets:
-      - source: github_token
-        target: GIT_TOKEN
     when:
       evaluate: 'CI_PIPELINE_FORGE_PARAMS_COMMIT_CHANGELOG == "true" && CI_PIPELINE_FORGE_PARAMS_CI_TEST != "true"'
 
   - name: apprise-notify
     image: caronc/apprise
+    environment:
+      APPRISE_URL:
+        from_secret: apprise_url
+      APPRISE_NOTIFICATION_TITLE:
+        from_secret: apprise_notification_title
+      APPRISE_NOTIFICATION_BODY:
+        from_secret: apprise_notification_body
     commands:
       - |
         apk_list=""
@@ -131,13 +133,6 @@ steps:
         if [ -n "$APPRISE_URL" ]; then
           apprise -t "$APPRISE_NOTIFICATION_TITLE" -b "$APPRISE_NOTIFICATION_BODY" "$APPRISE_URL"
         fi
-    secrets:
-      - source: apprise_url
-        target: APPRISE_URL
-      - source: apprise_notification_title
-        target: APPRISE_NOTIFICATION_TITLE
-      - source: apprise_notification_body
-        target: APPRISE_NOTIFICATION_BODY
     when:
       evaluate: 'CI_PIPELINE_FORGE_PARAMS_APPRISE_NOTIFY == "true"'
 
