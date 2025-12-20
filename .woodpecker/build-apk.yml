@@ -1,0 +1,171 @@
+when:
+  - event: [push, manual, cron]
+    branch: main
+
+variables:
+  - &docker_buildkit "DOCKER_BUILDKIT=1"
+  - &compose_docker_cli "COMPOSE_DOCKER_CLI_BUILD=1"
+
+steps:
+  - name: build-apk
+    image: python:3-slim
+    environment:
+      - DOCKER_BUILDKIT=1
+      - COMPOSE_DOCKER_CLI_BUILD=1
+      - GITHUB_REPOSITORY=${CI_REPO}
+    secrets:
+      - source: envs
+        target: ENVS
+      - source: docker_py_revanced_secrets
+        target: DOCKER_PY_REVANCED_SECRETS
+      - source: reddit_client_id
+        target: REDDIT_CLIENT_ID
+    commands:
+      # Checkout is automatic in Woodpecker
+
+      # Update environment files
+      - echo "$ENVS" >> .env
+      - echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY" >> .env
+      - echo "$DOCKER_PY_REVANCED_SECRETS" >> .env
+      - echo "Added envs"
+
+      # Install dependencies
+      - apt-get update && apt-get install -y docker.io docker-compose jq
+      - python -m pip install --upgrade pip
+
+      # Handle preferred patch apps if provided
+      - |
+        if [ -n "$CI_PIPELINE_FORGE_PARAMS_PREFERRED_PATCH_APPS" ]; then
+          pip install -r requirements.txt
+          export PREFERRED_PATCH_APPS="$CI_PIPELINE_FORGE_PARAMS_PREFERRED_PATCH_APPS"
+          python -m scripts.prefered_apps
+        fi
+
+      # Inject Reddit Client ID if available
+      - |
+        if [ -n "$REDDIT_CLIENT_ID" ]; then
+          client_id="$REDDIT_CLIENT_ID"
+          path="apks/options.json"
+          json_data=$(cat "$path")
+
+          new_object='{
+            "patchName": "Spoof client",
+            "options": [
+              {
+                "key": "client-id",
+                "value": "'$client_id'"
+              }
+            ]
+          }'
+
+          existing_object_index=$(echo "$json_data" | jq 'map(.patchName) | index("Spoof client")')
+          echo "$existing_object_index"
+
+          if [ "$existing_object_index" != "null" ]; then
+            echo "Patch entry already exists. Overriding client ID in it."
+            updated_json=$(echo "$json_data" | jq ".[${existing_object_index}].options[0].value = \"$client_id\"")
+          else
+            echo "Patch entry doesn't exist. Adding new entry."
+            updated_json=$(echo "$json_data" | jq ". += [$new_object]")
+          fi
+
+          echo "$updated_json" > "$path"
+        fi
+
+      # Build Revanced APKs
+      - |
+        if [ "$CI_PIPELINE_FORGE_PARAMS_CI_TEST" = "true" ]; then
+          echo "In CI Testing. Using local compose file."
+          docker compose -f docker-compose-local.yml up --build
+        else
+          echo "Using Prod compose file."
+          docker compose up --build
+        fi
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    when:
+      evaluate: 'CI_PIPELINE_FORGE_PARAMS_DEBUG_ENABLED != "true"'
+
+  - name: upload-artifacts
+    image: woodpeckerci/plugin-s3
+    settings:
+      bucket: ${CI_PIPELINE_FORGE_PARAMS_S3_BUCKET}
+      access_key:
+        from_secret: s3_access_key
+      secret_key:
+        from_secret: s3_secret_key
+      source:
+        - changelog.md
+        - changelog.json
+        - updates.json
+        - apks/*-output.apk
+        - apks/VancedMicroG.apk
+      target: /builds/${CI_REPO_NAME}/${CI_COMMIT_SHA}
+      path_style: true
+      endpoint:
+        from_secret: s3_endpoint
+    when:
+      evaluate: 'CI_PIPELINE_FORGE_PARAMS_GITHUB_UPLOAD == "true" && CI_PIPELINE_FORGE_PARAMS_DEBUG_ENABLED != "true"'
+
+  - name: github-release
+    image: woodpeckerci/plugin-github-release
+    settings:
+      api_key:
+        from_secret: github_token
+      files:
+        - apks/*-output.apk
+        - updates.json
+        - changelog.json
+        - changelog.md
+      title: "Build ${CI_COMMIT_SHA:0:7}"
+      note: "Automated build from commit ${CI_COMMIT_SHA}"
+      overwrite: true
+      prerelease: false
+    when:
+      evaluate: 'CI_PIPELINE_FORGE_PARAMS_GITHUB_UPLOAD == "true" && CI_PIPELINE_FORGE_PARAMS_DEBUG_ENABLED != "true"'
+
+  - name: commit-changelog
+    image: alpine/git
+    commands:
+      - git config user.name "Woodpecker CI"
+      - git config user.email "ci@woodpecker-ci.org"
+      - git checkout -B changelogs
+      - git add changelog.md changelog.json updates.json
+      - git commit -m "🚀New Build" || echo "No changes to commit"
+      - git push -f origin changelogs
+    secrets:
+      - source: github_token
+        target: GIT_TOKEN
+    when:
+      evaluate: 'CI_PIPELINE_FORGE_PARAMS_COMMIT_CHANGELOG == "true" && CI_PIPELINE_FORGE_PARAMS_CI_TEST != "true"'
+
+  - name: apprise-notify
+    image: caronc/apprise
+    commands:
+      - |
+        apk_list=""
+        for filename in $(find . -name "*-output.apk" -type f); do
+          apk_list="$apk_list,$filename"
+        done
+        apk_list=${apk_list:1}
+
+        if [ -n "$APPRISE_URL" ]; then
+          apprise -t "$APPRISE_NOTIFICATION_TITLE" -b "$APPRISE_NOTIFICATION_BODY" "$APPRISE_URL"
+        fi
+    secrets:
+      - source: apprise_url
+        target: APPRISE_URL
+      - source: apprise_notification_title
+        target: APPRISE_NOTIFICATION_TITLE
+      - source: apprise_notification_body
+        target: APPRISE_NOTIFICATION_BODY
+    when:
+      evaluate: 'CI_PIPELINE_FORGE_PARAMS_APPRISE_NOTIFY == "true"'
+
+  - name: cleanup
+    image: alpine
+    commands:
+      - rm -rf apks/*-output.apk
+      - echo "Cleanup completed"
+    when:
+      evaluate: 'CI_PIPELINE_FORGE_PARAMS_CLEANUP == "true"'
