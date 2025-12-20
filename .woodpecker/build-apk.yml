@@ -86,27 +86,6 @@ steps:
     when:
       evaluate: 'CI_PIPELINE_FORGE_PARAMS_DEBUG_ENABLED != "true"'
 
-  - name: upload-artifacts
-    image: woodpeckerci/plugin-s3
-    settings:
-      bucket: ${CI_PIPELINE_FORGE_PARAMS_S3_BUCKET}
-      access_key:
-        from_secret: s3_access_key
-      secret_key:
-        from_secret: s3_secret_key
-      source:
-        - changelog.md
-        - changelog.json
-        - updates.json
-        - apks/*-output.apk
-        - apks/VancedMicroG.apk
-      target: /builds/${CI_REPO_NAME}/${CI_COMMIT_SHA}
-      path_style: true
-      endpoint:
-        from_secret: s3_endpoint
-    when:
-      evaluate: 'CI_PIPELINE_FORGE_PARAMS_GITHUB_UPLOAD == "true" && CI_PIPELINE_FORGE_PARAMS_DEBUG_ENABLED != "true"'
-
   - name: github-release
     image: woodpeckerci/plugin-github-release
     settings:
