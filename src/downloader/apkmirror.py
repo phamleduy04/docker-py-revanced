@@ -15,7 +15,7 @@ from src.downloader.sources import APK_MIRROR_BASE_URL
 from src.exceptions import APKMirrorAPKDownloadError, DownloadError, ScrapingError
 from src.utils import bs4_parser, contains_any_word, handle_request_response, request_header, request_timeout, slugify
 
-_apkmirror_session = cffi_requests.Session(impersonate="realworld")
+_apkmirror_session = cffi_requests.Session(impersonate="chrome")
 _apkmirror_session.headers.update(request_header)
 
 REQUEST_DELAY = 5
