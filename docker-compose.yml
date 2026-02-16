@@ -1,6 +1,7 @@
 services:
   revanced:
-    context: .
+    build:
+      context: .
       dockerfile: Dockerfile
     container_name: revanced-builder
     pull_policy: always
