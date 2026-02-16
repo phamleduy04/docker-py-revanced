@@ -1,6 +1,7 @@
 services:
   revanced:
-    image: nikhilbadyal/docker-py-revanced
+    context: .
+      dockerfile: Dockerfile
     container_name: revanced-builder
     pull_policy: always
     env_file:
