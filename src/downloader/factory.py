@@ -45,7 +45,7 @@ class DownloaderFactory(object):
             return ApkMirror(config)
         if apk_source.startswith(APK_MONK_BASE_URL):
             return ApkMonk(config)
-        if apk_source.startswith(APKEEP):
+        if apk_source.lower().startswith(APKEEP):
             return Apkeep(config)
         msg = "No download factory found."
         raise DownloadError(msg, url=apk_source)

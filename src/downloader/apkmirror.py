@@ -1,20 +1,58 @@
 """Downloader Class."""
 
+import time
+from time import perf_counter
 from typing import Any, Self
 
-import requests
 from bs4 import BeautifulSoup, Tag
+from curl_cffi import requests as cffi_requests
 from loguru import logger
+from tqdm import tqdm
 
 from src.app import APP
 from src.downloader.download import Downloader
 from src.downloader.sources import APK_MIRROR_BASE_URL
-from src.exceptions import APKMirrorAPKDownloadError, ScrapingError
+from src.exceptions import APKMirrorAPKDownloadError, DownloadError, ScrapingError
 from src.utils import bs4_parser, contains_any_word, handle_request_response, request_header, request_timeout, slugify
+
+_apkmirror_session = cffi_requests.Session(impersonate="chrome")
+_apkmirror_session.headers.update(request_header)
+
+REQUEST_DELAY = 5
 
 
 class ApkMirror(Downloader):
     """Files downloader."""
+
+    def _download(self: Self, url: str, file_name: str) -> None:
+        """Override to use curl_cffi with Chrome impersonation for APKMirror downloads."""
+        if not url:
+            msg = "No url provided to download"
+            raise DownloadError(msg)
+        if self.config.dry_run or self.config.temp_folder.joinpath(file_name).exists():
+            logger.debug(f"Skipping download of {file_name} from {url}. File already exists or dry running.")
+            return
+        logger.info(f"Trying to download {file_name} from {url}")
+        self._QUEUE_LENGTH += 1
+        start = perf_counter()
+        time.sleep(REQUEST_DELAY)
+        response = _apkmirror_session.get(url, timeout=request_timeout, stream=True)
+        handle_request_response(response, url)
+        total = int(response.headers.get("content-length", 0))
+        bar = tqdm(
+            desc=file_name,
+            total=total,
+            unit="iB",
+            unit_scale=True,
+            unit_divisor=1024,
+            colour="green",
+        )
+        with self.config.temp_folder.joinpath(file_name).open("wb") as dl_file, bar:
+            for chunk in response.iter_content(self._CHUNK_SIZE):
+                size = dl_file.write(chunk)
+                bar.update(size)
+        self._QUEUE.put((perf_counter() - start, file_name))
+        logger.debug(f"Downloaded {file_name}")
 
     def _extract_force_download_link(self: Self, link: str, app: str) -> tuple[str, str]:
         """Extract force download link."""
@@ -78,7 +116,8 @@ class ApkMirror(Downloader):
     @staticmethod
     def _extract_source(url: str) -> str:
         """Extracts the source from the url incase of reuse."""
-        response = requests.get(url, headers=request_header, timeout=request_timeout)
+        time.sleep(REQUEST_DELAY)
+        response = _apkmirror_session.get(url, timeout=request_timeout)
         handle_request_response(response, url)
         return response.text
 
