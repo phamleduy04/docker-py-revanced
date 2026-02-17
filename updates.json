@@ -1,1 +1,397 @@
-{}
+{
+    "messenger": {
+        "app_version": "latest",
+        "patches_versions": [
+            "v5.50.2"
+        ],
+        "cli_version": "v5.0.1",
+        "ms_epoch_since_patched": 1771309825392,
+        "date_patched": "2026-02-17 06:30:25.392031+05:30",
+        "app_dump": {
+            "app_name": "messenger",
+            "app_version": "latest",
+            "experiment": false,
+            "cli_dl": "https://github.com/revanced/revanced-cli/releases/latest",
+            "patches_dl_list": [
+                "https://github.com/revanced/revanced-patches/releases/latest"
+            ],
+            "patches_dl": "https://github.com/revanced/revanced-patches/releases/latest",
+            "exclude_request": [],
+            "include_request": [],
+            "resource": {
+                "cli": {
+                    "file_name": "2d7026935af86ae1618510c333c6e98bcd084ac4312ff8fd382414464c601e7f.jar",
+                    "version": "v5.0.1"
+                },
+                "patches": {
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            },
+            "patch_bundles": [
+                {
+                    "name": "patches",
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            ],
+            "no_of_patches": 5,
+            "keystore_name": "revanced.keystore",
+            "archs_to_build": [],
+            "options_file": "options.json",
+            "download_file_name": "com.facebook.orca.apk",
+            "download_dl": "apkeep://google-play/com.facebook.orca",
+            "download_source": "apkeep",
+            "package_name": "com.facebook.orca",
+            "old_key": true,
+            "patches": [],
+            "space_formatted": true
+        }
+    },
+    "reddit": {
+        "app_version": "latest",
+        "patches_versions": [
+            "v5.50.2"
+        ],
+        "cli_version": "v5.0.1",
+        "ms_epoch_since_patched": 1771309841915,
+        "date_patched": "2026-02-17 06:30:41.915267+05:30",
+        "app_dump": {
+            "app_name": "reddit",
+            "app_version": "latest",
+            "experiment": false,
+            "cli_dl": "https://github.com/revanced/revanced-cli/releases/latest",
+            "patches_dl_list": [
+                "https://github.com/revanced/revanced-patches/releases/latest"
+            ],
+            "patches_dl": "https://github.com/revanced/revanced-patches/releases/latest",
+            "exclude_request": [],
+            "include_request": [],
+            "resource": {
+                "cli": {
+                    "file_name": "2d7026935af86ae1618510c333c6e98bcd084ac4312ff8fd382414464c601e7f.jar",
+                    "version": "v5.0.1"
+                },
+                "patches": {
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            },
+            "patch_bundles": [
+                {
+                    "name": "patches",
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            ],
+            "no_of_patches": 4,
+            "keystore_name": "revanced.keystore",
+            "archs_to_build": [],
+            "options_file": "options.json",
+            "download_file_name": "reddit.apk",
+            "download_dl": "https://dw.uptodown.com/dwn/zGFlAaQinMo0GEvjV1id7N_3UOC2VZnbBnet__RQ8OhY9kJLp1GCzdwdTQi9FpZI_vVsSkcJ05QciRVXMFThmq0TVW1FnUQ7q7p5QVW3hsKqS2JbywxRTLeBEHOhGwlK/6coCrkA1GqxsQ09uG4QUbyt8TfCCDUnUQfNqymqIq2anecfgQlDhrFPkVvdXcawGXSdabWRUkLJOVYNN_MvX6oR4XwB3lBJeTfvkP4KpvWHt-_cCszjtqCMkJ1cJFRMc/-9nhJ91TmltYbO-yVh2PegXtGWMekFtuPGBeverBmvEqiQ0huReAS_1sX1cULsEs6c-Wy6QS81KkPugz47r6eqQ9hhXPT8-zsmRoxFl3EMU=/",
+            "download_source": "https://reddit-official-app.en.uptodown.com/android",
+            "package_name": "com.reddit.frontpage",
+            "old_key": true,
+            "patches": [],
+            "space_formatted": true
+        }
+    },
+    "facebook": {
+        "app_version": "490.0.0",
+        "patches_versions": [
+            "v5.50.2"
+        ],
+        "cli_version": "v5.0.1",
+        "ms_epoch_since_patched": 1771309839992,
+        "date_patched": "2026-02-17 06:30:39.994423+05:30",
+        "app_dump": {
+            "app_name": "facebook",
+            "app_version": "490.0.0",
+            "experiment": false,
+            "cli_dl": "https://github.com/revanced/revanced-cli/releases/latest",
+            "patches_dl_list": [
+                "https://github.com/revanced/revanced-patches/releases/latest"
+            ],
+            "patches_dl": "https://github.com/revanced/revanced-patches/releases/latest",
+            "exclude_request": [],
+            "include_request": [],
+            "resource": {
+                "cli": {
+                    "file_name": "2d7026935af86ae1618510c333c6e98bcd084ac4312ff8fd382414464c601e7f.jar",
+                    "version": "v5.0.1"
+                },
+                "patches": {
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            },
+            "patch_bundles": [
+                {
+                    "name": "patches",
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            ],
+            "no_of_patches": 2,
+            "keystore_name": "revanced.keystore",
+            "archs_to_build": [],
+            "options_file": "options.json",
+            "download_file_name": "com.facebook.katana.apk",
+            "download_dl": "apkeep://google-play/com.facebook.katana",
+            "download_source": "apkeep",
+            "package_name": "com.facebook.katana",
+            "old_key": true,
+            "patches": [],
+            "space_formatted": true
+        }
+    },
+    "photos": {
+        "app_version": "latest",
+        "patches_versions": [
+            "v5.50.2"
+        ],
+        "cli_version": "v5.0.1",
+        "ms_epoch_since_patched": 1771290561514,
+        "date_patched": "2026-02-17 01:09:21.513903+05:30",
+        "app_dump": {
+            "app_name": "photos",
+            "app_version": "latest",
+            "experiment": false,
+            "cli_dl": "https://github.com/revanced/revanced-cli/releases/latest",
+            "patches_dl_list": [
+                "https://github.com/revanced/revanced-patches/releases/latest"
+            ],
+            "patches_dl": "https://github.com/revanced/revanced-patches/releases/latest",
+            "exclude_request": [],
+            "include_request": [],
+            "resource": {
+                "cli": {
+                    "file_name": "2d7026935af86ae1618510c333c6e98bcd084ac4312ff8fd382414464c601e7f.jar",
+                    "version": "v5.0.1"
+                },
+                "patches": {
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            },
+            "patch_bundles": [
+                {
+                    "name": "patches",
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            ],
+            "no_of_patches": 3,
+            "keystore_name": "revanced.keystore",
+            "archs_to_build": [],
+            "options_file": "options.json",
+            "download_file_name": "com.google.android.apps.photos.apk",
+            "download_dl": "apkeep://google-play/com.google.android.apps.photos",
+            "download_source": "apkeep",
+            "package_name": "com.google.android.apps.photos",
+            "old_key": true,
+            "patches": [],
+            "space_formatted": true
+        }
+    },
+    "spotify": {
+        "app_version": "latest",
+        "patches_versions": [
+            "v5.50.2"
+        ],
+        "cli_version": "v5.0.1",
+        "ms_epoch_since_patched": 1771290625301,
+        "date_patched": "2026-02-17 01:10:25.300904+05:30",
+        "app_dump": {
+            "app_name": "spotify",
+            "app_version": "latest",
+            "experiment": false,
+            "cli_dl": "https://github.com/revanced/revanced-cli/releases/latest",
+            "patches_dl_list": [
+                "https://github.com/revanced/revanced-patches/releases/latest"
+            ],
+            "patches_dl": "https://github.com/revanced/revanced-patches/releases/latest",
+            "exclude_request": [],
+            "include_request": [],
+            "resource": {
+                "cli": {
+                    "file_name": "2d7026935af86ae1618510c333c6e98bcd084ac4312ff8fd382414464c601e7f.jar",
+                    "version": "v5.0.1"
+                },
+                "patches": {
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            },
+            "patch_bundles": [
+                {
+                    "name": "patches",
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            ],
+            "no_of_patches": 5,
+            "keystore_name": "revanced.keystore",
+            "archs_to_build": [],
+            "options_file": "options.json",
+            "download_file_name": "com.spotify.music.apk",
+            "download_dl": "apkeep://google-play/com.spotify.music",
+            "download_source": "apkeep",
+            "package_name": "com.spotify.music",
+            "old_key": true,
+            "patches": [],
+            "space_formatted": true
+        }
+    },
+    "tiktok": {
+        "app_version": "36.5.4",
+        "patches_versions": [
+            "v5.50.2"
+        ],
+        "cli_version": "v5.0.1",
+        "ms_epoch_since_patched": 1771309923119,
+        "date_patched": "2026-02-17 06:32:03.118697+05:30",
+        "app_dump": {
+            "app_name": "tiktok",
+            "app_version": "36.5.4",
+            "experiment": false,
+            "cli_dl": "https://github.com/revanced/revanced-cli/releases/latest",
+            "patches_dl_list": [
+                "https://github.com/revanced/revanced-patches/releases/latest"
+            ],
+            "patches_dl": "https://github.com/revanced/revanced-patches/releases/latest",
+            "exclude_request": [],
+            "include_request": [
+                "spoof-build-info",
+                "spoof-sim-country"
+            ],
+            "resource": {
+                "cli": {
+                    "file_name": "2d7026935af86ae1618510c333c6e98bcd084ac4312ff8fd382414464c601e7f.jar",
+                    "version": "v5.0.1"
+                },
+                "patches": {
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            },
+            "patch_bundles": [
+                {
+                    "name": "patches",
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            ],
+            "no_of_patches": 10,
+            "keystore_name": "revanced.keystore",
+            "archs_to_build": [],
+            "options_file": "options.json",
+            "download_file_name": "tiktok.apk",
+            "download_dl": "https://dw.uptodown.com/dwn/zGFlAaQinMo0GEvjV1id7N_3UOC2VZnbBnet__RQ8OgmtGttZCliX0qFoKQ_9Jsk-xKBO9aSSgEk0rf6pO0Q57qx85WFlaKeXlCvWZRKmWVpF2kq7NYozjapCkm9Umn6/L5UP84Kj7uLnR9X1pK6_OcykmmPima2mhic-OszH7n3JE5CjZsiUD6R8tuP-D9Ih3rCNrGdVQctP6tT5XijiXBkaYJgabQdRl_mhxZvGDKUdOffK3UkknYgYqshxkiMe/0K1N8OMb6K2ol-or5ixLrVX6MW3xePBm4jWFGM2JiegsylxHGGDNmToQt9QbZ00R4sRReg9ixii_pSiEVk2_AA==/",
+            "download_source": "https://tiktok.en.uptodown.com/android",
+            "package_name": "com.ss.android.ugc.trill",
+            "old_key": true,
+            "patches": [],
+            "space_formatted": true
+        }
+    },
+    "youtube_music": {
+        "app_version": "8.10.52",
+        "patches_versions": [
+            "v5.50.2"
+        ],
+        "cli_version": "v5.0.1",
+        "ms_epoch_since_patched": 1771309930644,
+        "date_patched": "2026-02-17 06:32:10.644392+05:30",
+        "app_dump": {
+            "app_name": "youtube_music",
+            "app_version": "8.10.52",
+            "experiment": false,
+            "cli_dl": "https://github.com/revanced/revanced-cli/releases/latest",
+            "patches_dl_list": [
+                "https://github.com/revanced/revanced-patches/releases/latest"
+            ],
+            "patches_dl": "https://github.com/revanced/revanced-patches/releases/latest",
+            "exclude_request": [],
+            "include_request": [],
+            "resource": {
+                "cli": {
+                    "file_name": "2d7026935af86ae1618510c333c6e98bcd084ac4312ff8fd382414464c601e7f.jar",
+                    "version": "v5.0.1"
+                },
+                "patches": {
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            },
+            "patch_bundles": [
+                {
+                    "name": "patches",
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            ],
+            "no_of_patches": 19,
+            "keystore_name": "revanced.keystore",
+            "archs_to_build": [],
+            "options_file": "options.json",
+            "download_file_name": "youtube_music.apk",
+            "download_dl": "https://dw.uptodown.com/dwn/zGFlAaQinMo0GEvjV1id7N_3UOC2VZnbBnet__RQ8Oh74nIuzLF5BQVWxklpJdMk5NDlOLcTLWu198XhNtIOxzW8ly5fwQdXaDfgXH9I1cmmBK1l0DDPEChXXKEp5v7G/omU-4bDBvV0tX8BnxVbDViNO766ZVwfwPmbgfD8_AxGBqo2G6K4kA8F4C1r0b1m7lfP5swZuzeXFQ9sMgUNG-fwOdbQKlkkt1Y-hcTUL-J8wJx-Owfolyo8-eQiCK-RH/j8yO5UCXkYmOTODkuXDOh8NAnYQBb1xr_-PfaTF_vD1UYBM54moRuWZbcjy5CGlYuplMyaXf2bGcwYIKww7LyjrkND8FjLVruY-8Ow_bjUE=/",
+            "download_source": "https://youtube-music.en.uptodown.com/android",
+            "package_name": "com.google.android.apps.youtube.music",
+            "old_key": true,
+            "patches": [],
+            "space_formatted": true
+        }
+    },
+    "youtube": {
+        "app_version": "20.14.43",
+        "patches_versions": [
+            "v5.50.2"
+        ],
+        "cli_version": "v5.0.1",
+        "ms_epoch_since_patched": 1771309889437,
+        "date_patched": "2026-02-17 06:31:29.437031+05:30",
+        "app_dump": {
+            "app_name": "youtube",
+            "app_version": "20.14.43",
+            "experiment": false,
+            "cli_dl": "https://github.com/revanced/revanced-cli/releases/latest",
+            "patches_dl_list": [
+                "https://github.com/revanced/revanced-patches/releases/latest"
+            ],
+            "patches_dl": "https://github.com/revanced/revanced-patches/releases/latest",
+            "exclude_request": [],
+            "include_request": [],
+            "resource": {
+                "cli": {
+                    "file_name": "2d7026935af86ae1618510c333c6e98bcd084ac4312ff8fd382414464c601e7f.jar",
+                    "version": "v5.0.1"
+                },
+                "patches": {
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            },
+            "patch_bundles": [
+                {
+                    "name": "patches",
+                    "file_name": "2ce4d0138df0cfdc4a956892d7b524c1ce27dfe0d3826952d0ae25659b154345.rvp",
+                    "version": "v5.50.2"
+                }
+            ],
+            "no_of_patches": 59,
+            "keystore_name": "revanced.keystore",
+            "archs_to_build": [],
+            "options_file": "options.json",
+            "download_file_name": "youtube.apk",
+            "download_dl": "https://dw.uptodown.com/dwn/zGFlAaQinMo0GEvjV1id7N_3UOC2VZnbBnet__RQ8Ogb5omVnpoD3KZuuUt_nfis5gKnxtPEJugZKhWMfnIphidNfs2ZPMqUxCJ0-acuMwlFJ8TxJJYQWgIGT5m3edAQ/K9git6ou2GcBeQhT7-UVBAeslyKubyZ4sq3YMatHaSk3uQy3QKj3F35c4bcoa_fB8wKoO3Vt7EYObgw6ArE1BbM5JYmzQi3-OB8D2vCoJOL_wyJHDbB4F9PSvwnx8z8Y/1KHR1TXnFY-HenM9K1hxBLbtX92WdL6GNtCxlHRN17mAraRzOjN0snx40pSQQ_QZ7BVRdIHEURnznETxEmKTLQ==/",
+            "download_source": "https://youtube.en.uptodown.com/android",
+            "package_name": "com.google.android.youtube",
+            "old_key": true,
+            "patches": [],
+            "space_formatted": true
+        }
+    }
+}
