@@ -1,1 +1,26 @@
-{}
+{
+    "ReVanced/GmsCore": {
+        "ResourceName": "[ReVanced/GmsCore](https://github.com/ReVanced/GmsCore/releases/tag/v0.3.13.2.250932)",
+        "Version": "v0.3.13.2.250932",
+        "Changelog": "# Download\r\n\r\n| Default | Huawei |\r\n| -------- | -------- |\r\n| [Download](https://github.com/ReVanced/GmsCore/releases/download/v0.3.13.2.250932/app.revanced.android.gms-250932004-signed.apk) |  [Download](https://github.com/ReVanced/GmsCore/releases/download/v0.3.13.2.250932/app.revanced.android.gms-250932004-hw-signed.apk) |\r\n",
+        "PublishedOn": "2026-02-16T01:57:27Z"
+    },
+    "REAndroid/APKEditor": {
+        "ResourceName": "[REAndroid/APKEditor](https://github.com/REAndroid/APKEditor/releases/tag/V1.4.8)",
+        "Version": "V1.4.8",
+        "Changelog": "## What's Changed\r\n\r\n* Improve performance by @wchill in https://github.com/REAndroid/ARSCLib/pull/98\r\n* Update Decompile info on README.md by @yonggamer in https://github.com/REAndroid/APKEditor/pull/219\r\n\r\n\r\n**Full Changelog**: https://github.com/REAndroid/APKEditor/compare/V1.4.7...V1.4.8\r\n\r\n## New Contributors\r\n* @wchill made their first contribution in https://github.com/REAndroid/ARSCLib/pull/98",
+        "PublishedOn": "2026-03-21T13:30:55Z"
+    },
+    "revanced/revanced-cli": {
+        "ResourceName": "[revanced/revanced-cli](https://github.com/ReVanced/revanced-cli/releases/tag/v6.0.0)",
+        "Version": "v6.0.0",
+        "Changelog": "# [6.0.0](https://github.com/ReVanced/revanced-cli/compare/v5.0.1...v6.0.0) (2026-03-14)\n\n\n* build(Needs bump)!: Update to ReVanced Patcher v22 ([#385](https://github.com/ReVanced/revanced-cli/issues/385)) ([30f36ee](https://github.com/ReVanced/revanced-cli/commit/30f36ee270d4b63b69bf7949c7968f2827c395ce))\n\n\n### Bug Fixes\n\n* Do not print patch description if null ([bba90fe](https://github.com/ReVanced/revanced-cli/commit/bba90fede85e4632efb9509e5bcf9091a9435549))\n* Group `mount` and `install` options into an argument group  ([#364](https://github.com/ReVanced/revanced-cli/issues/364)) ([0c53a2d](https://github.com/ReVanced/revanced-cli/commit/0c53a2d1d75d3d934d134594751fe6cd0b000d1a))\n\n\n### Features\n\n* Add signature and build provenance verification ([f481462](https://github.com/ReVanced/revanced-cli/commit/f481462ccf2eb55d1f964c0f3934bf2b29f4b0ef))\n\n\n### BREAKING CHANGES\n\n* ReVanced CLI switches to ReVanced Patcher v22 and will therefore be incompatible with patches from older versions of ReVanced Patcher.\n\n\n\n",
+        "PublishedOn": "2026-03-14T23:08:12Z"
+    },
+    "revanced/revanced-patches": {
+        "ResourceName": "[revanced/revanced-patches](https://gitlab.com/ReVanced/revanced-patches/-/releases/v6.1.1-dev.3)",
+        "Version": "v6.1.1-dev.3",
+        "Changelog": "## [6.1.1-dev.3](https://github.com/ReVanced/revanced-patches/compare/v6.1.1-dev.2...v6.1.1-dev.3) (2026-03-20)\n\n\n### Bug Fixes\n\n* **GmsCore support:** Correct option name ([6cbef5a](https://github.com/ReVanced/revanced-patches/commit/6cbef5a48a83e4a74de578e7d20f7d71a8b1de8e))\n* **GmsCore support:** Correct package name for custom vendor group id ([292728a](https://github.com/ReVanced/revanced-patches/commit/292728a8baddbca87993590db4a8bab60b564432))\n\n\n\n",
+        "PublishedOn": "2026-03-20T23:07:40.000Z"
+    }
+}

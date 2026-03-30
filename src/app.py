@@ -202,6 +202,10 @@ class APP(object):
             tag, url = Github.patch_resource(url, assets_filter, config)
             if tag.startswith("tags/"):
                 tag = tag.split("/")[-1]
+        elif url.startswith("https://api.revanced.app/v5/patches"):
+            from src.downloader.revanced_api import patch_resource as revanced_api_patch_resource  # noqa: PLC0415
+
+            tag, url = revanced_api_patch_resource(url, assets_filter, config)
         elif url.startswith("local://"):
             return tag, url.split("/")[-1]
         if not file_name:
