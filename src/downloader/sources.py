@@ -13,6 +13,9 @@ not_found_icon = "https://www.svgrepo.com/download/441689/page-not-found.svg"
 # ReVanced API v5 exposes patch release metadata, and the status check resolves the bundle from that contract.
 revanced_api = "https://api.revanced.app/v5/patches"
 APKEEP = "apkeep"
+JUSTAPK = "justapk"
+# Bare keyword usable as a DL source; resolves the APKMirror app by package name through justapk.
+APKMIRROR_KEYWORD = "apkmirror"
 apk_sources = {
     "backdrops": f"{APK_MIRROR_BASE_APK_URL}/backdrops/backdrops-wallpapers/",
     "bacon": f"{APK_MIRROR_BASE_APK_URL}/onelouder-apps/baconreader-for-reddit/",

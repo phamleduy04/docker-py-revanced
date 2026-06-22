@@ -112,13 +112,9 @@ jobs:
       - name: Build Revanced APKs
         if: ${{ true && !inputs.DEBUG_ENABLED }}
         run: |
-          if [[ "${{ inputs.CI_TEST }}" =~ ^(true|True|1)$ ]]; then
-              echo "In CI Testing. Using local compose file."
-              docker compose -f docker-compose-local.yml up --build
-          else
-              echo "Using Prod compose file."
-              docker compose up --build
-          fi
+          # Build the image locally so requirements.txt (including justapk) is baked in,
+          # instead of pulling the prebuilt published image that lacks the added dependency.
+          docker compose -f docker-compose-local.yml up --build
 
       - name: Verify at least one APK was patched
         if: ${{ true && !inputs.DEBUG_ENABLED }}

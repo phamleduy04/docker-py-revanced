@@ -2,14 +2,16 @@
 
 from src.config import RevancedConfig
 from src.downloader.apkeep import Apkeep
-from src.downloader.apkmirror import ApkMirror
 from src.downloader.download import Downloader
 from src.downloader.github import Github
 from src.downloader.gitlab import Gitlab
+from src.downloader.justapk import Justapk
 from src.downloader.sources import (
     APK_MIRROR_BASE_URL,
     APKEEP,
+    APKMIRROR_KEYWORD,
     GITHUB_BASE_URL,
+    JUSTAPK,
     UPTODOWN_SUFFIX,
 )
 from src.downloader.uptodown import UptoDown
@@ -35,9 +37,13 @@ class DownloaderFactory(object):
             return Gitlab(config)
         if apk_source.endswith(UPTODOWN_SUFFIX):
             return UptoDown(config)
-        if apk_source.startswith(APK_MIRROR_BASE_URL):
-            return ApkMirror(config)
+        # APKMirror listings (full URL or the bare "apkmirror" keyword) are resolved by package name through
+        # justapk, which handles Cloudflare and source fallback.
+        if apk_source.startswith(APK_MIRROR_BASE_URL) or apk_source == APKMIRROR_KEYWORD:
+            return Justapk(config)
         if apk_source.startswith(APKEEP):
             return Apkeep(config)
+        if apk_source.startswith(JUSTAPK):
+            return Justapk(config)
         msg = "No download factory found."
         raise DownloadError(msg, url=apk_source)

@@ -14,7 +14,7 @@ from loguru import logger
 
 from src.cli_args import merge_cli_arg_maps
 from src.config import RevancedConfig
-from src.downloader.sources import APKEEP, apk_sources
+from src.downloader.sources import APKEEP, JUSTAPK, apk_sources
 from src.exceptions import BuilderError, DownloadError, PatchingFailedError
 from src.utils import slugify, time_zone
 
@@ -135,18 +135,19 @@ class APP(object):
     def get_download_cache_key(self: Self) -> tuple[str, str]:
         """Generate a unique cache key for APK downloads.
 
-        For apkeep sources, includes package name to prevent cache collisions
-        when multiple apps use the same version (e.g., "latest").
+        For package-name sources (apkeep, justapk), includes package name to
+        prevent cache collisions when multiple apps use the same version
+        (e.g., "latest").
 
         Returns
         -------
             tuple[str, str]: Cache key as (source, identifier) where identifier
-                            includes package name for apkeep sources.
+                            includes package name for package-name sources.
         """
         version = self.app_version or "latest"
 
-        if self.download_source == APKEEP:
-            # Use package@version format for apkeep to ensure uniqueness
+        if self.download_source in (APKEEP, JUSTAPK):
+            # These CLI sources resolve by package name, so disambiguate the cache by package@version.
             return (self.download_source, f"{self.package_name}@{version}")
 
         # For URL-based sources, source+version is already unique
