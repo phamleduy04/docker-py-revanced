@@ -5,6 +5,8 @@ environs==15.0.1
 google-play-scraper==1.2.7
 lastversion==3.6.12
 loguru==0.7.3
+numpy==2.5.0
+opencv-python-headless==4.13.0.92
 packaging==26.2
 pre-commit==4.6.0
 python-dotenv==1.2.2

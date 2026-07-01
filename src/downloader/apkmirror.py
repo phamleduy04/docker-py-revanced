@@ -6,6 +6,8 @@ from uuid import uuid4
 from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
+from pathlib import Path
+
 from src.app import APP
 from src.downloader.download import Downloader
 from src.downloader.sources import APK_MIRROR_BASE_URL
@@ -16,8 +18,12 @@ from src.utils import (
     contains_any_word,
     handle_request_response,
     request_timeout,
+    resource_folder,
     slugify,
 )
+
+# Screenshots land in the mounted resource folder so they survive the container and are reachable for debugging.
+CLOAK_DEBUG_SCREENSHOT_DIR = Path(resource_folder) / "debug-screenshots"
 
 # CloakBrowser runs inside the Docker container as root, so Chromium needs container-safe launch flags.
 CLOAK_BROWSER_ARGS = ["--no-sandbox", "--disable-dev-shm-usage"]
@@ -25,6 +31,23 @@ CLOAK_BROWSER_ARGS = ["--no-sandbox", "--disable-dev-shm-usage"]
 CLOAK_NETWORK_IDLE_TIMEOUT_MS = 15_000
 # Playwright expects milliseconds while the rest of the downloader config stores request timeouts in seconds.
 CLOAK_REQUEST_TIMEOUT_MS = request_timeout * 1000
+# Cloudflare's interactive "Verify you are human" checkbox lives in a cross-origin iframe that needs a short wait.
+CLOAK_CHALLENGE_CLICK_TIMEOUT_MS = 10_000
+# After clicking the checkbox, Cloudflare validates and redirects; give it room before declaring the challenge unsolved.
+CLOAK_CHALLENGE_SETTLE_TIMEOUT_MS = 20_000
+# Cloudflare Turnstile renders its checkbox inside these iframes; we click via the iframe's on-page bounding box.
+CLOAK_CHALLENGE_FRAME_SELECTOR = "iframe[src*='challenges.cloudflare.com'], iframe[src*='turnstile']"
+# Selectors that may hold the on-page checkbox: the full-page interstitial exposes the challenge iframe, while
+# embedded widgets also expose the `.cf-turnstile` div. The managed page renders BOTH a hidden 0x0 orchestration
+# iframe and the visible widget iframe, so candidates are filtered by size rather than trusting the first match.
+CLOAK_CHALLENGE_WIDGET_SELECTORS = (CLOAK_CHALLENGE_FRAME_SELECTOR, ".cf-turnstile")
+# Minimum clickable footprint (CSS px) that separates the real Turnstile widget from the hidden orchestration iframe.
+CLOAK_CHALLENGE_MIN_WIDGET_WIDTH = 50
+CLOAK_CHALLENGE_MIN_WIDGET_HEIGHT = 30
+# The checkbox sits near the left edge of the widget; offset inward so the click lands on it, not the border.
+CLOAK_CHALLENGE_CHECKBOX_X_OFFSET = 30
+# Move the pointer in several steps instead of teleporting so the cursor path resembles a human before clicking.
+CLOAK_CHALLENGE_MOUSE_STEPS = 12
 # APKMirror sometimes returns challenge HTML with HTTP 200, so the body needs explicit marker detection.
 CLOAK_CHALLENGE_MARKERS = (
     "attention required",
@@ -61,10 +84,113 @@ class ApkMirror(Downloader):
         return launch, PlaywrightTimeoutError
 
     @staticmethod
+    def _locate_challenge_widget(page: Any) -> Any:
+        """Return the on-page Turnstile element whose bounding box positions the "Verify you are human" checkbox.
+
+        The managed challenge renders a hidden 0x0 orchestration iframe alongside the visible widget iframe, so
+        candidates are filtered by a minimum clickable footprint instead of trusting the first DOM match.
+        """
+        try:
+            # Wait until at least one challenge iframe is attached before measuring positions.
+            page.wait_for_selector(CLOAK_CHALLENGE_FRAME_SELECTOR, timeout=CLOAK_CHALLENGE_CLICK_TIMEOUT_MS)
+        except Exception:  # noqa: BLE001
+            logger.debug("No Cloudflare challenge iframe attached within the click timeout.")
+
+        for selector in CLOAK_CHALLENGE_WIDGET_SELECTORS:
+            try:
+                candidates = page.query_selector_all(selector)
+            except Exception:  # noqa: BLE001
+                continue
+            for element in candidates:
+                box = element.bounding_box()
+                if (
+                    box
+                    and box["width"] >= CLOAK_CHALLENGE_MIN_WIDGET_WIDTH
+                    and box["height"] >= CLOAK_CHALLENGE_MIN_WIDGET_HEIGHT
+                ):
+                    logger.debug(f"Selected Turnstile widget via '{selector}' with box {box}.")
+                    return element
+        return None
+
+    @staticmethod
+    def _locate_checkbox_via_cv(page: Any) -> tuple[float, float] | None:
+        """Locate the checkbox by pixels via OpenCV template matching against a full-page screenshot."""
+        try:
+            # Import lazily so non-APKMirror flows never pay the OpenCV/numpy import cost.
+            from src.downloader.turnstile_cv import locate_checkbox  # noqa: PLC0415
+
+            point = locate_checkbox(page.screenshot(full_page=True))
+        except Exception as exc:  # noqa: BLE001
+            # CV is a best-effort locator; any failure falls back to DOM geometry rather than aborting the click.
+            logger.debug(f"Turnstile CV locate failed: {exc}")
+            return None
+        if point is None:
+            return None
+        return float(point.x), float(point.y)
+
+    @staticmethod
+    def _locate_checkbox_via_dom(page: Any) -> tuple[float, float] | None:
+        """Locate the checkbox from the widget iframe's on-page bounding box as a fallback to CV."""
+        widget = ApkMirror._locate_challenge_widget(page)
+        if widget is None:
+            return None
+        box = widget.bounding_box()
+        if not box:
+            return None
+        # The checkbox sits at the left of the widget, vertically centered.
+        return box["x"] + CLOAK_CHALLENGE_CHECKBOX_X_OFFSET, box["y"] + box["height"] / 2
+
+    @staticmethod
+    def _attempt_challenge_click(page: Any, url: str, playwright_timeout_error: Any) -> None:
+        """Click Cloudflare's "Verify you are human" checkbox using real main-frame mouse coordinates.
+
+        The checkbox lives in a cross-origin iframe behind a closed shadow root, so Playwright locators cannot reach
+        it, and `frame_locator().click()` dispatches a CDP click relative to the iframe (screenX/screenY < 100) that
+        Cloudflare flags as a bot. We instead resolve the checkbox's full-frame pixel position -- OpenCV template
+        matching first, DOM iframe geometry as fallback -- and drive `page.mouse` so the click looks human.
+        """
+        coordinates = ApkMirror._locate_checkbox_via_cv(page) or ApkMirror._locate_checkbox_via_dom(page)
+        if coordinates is None:
+            logger.debug(f"No Cloudflare Turnstile checkbox found to click for {url}.")
+            return
+
+        click_x, click_y = coordinates
+        try:
+            # Move (in steps) then click on the main frame so screenX/screenY look human rather than iframe-relative.
+            page.mouse.move(click_x, click_y, steps=CLOAK_CHALLENGE_MOUSE_STEPS)
+            page.mouse.click(click_x, click_y)
+            logger.info(f"Clicked Cloudflare checkbox for {url} at ({click_x:.0f}, {click_y:.0f}).")
+        except Exception as exc:  # noqa: BLE001
+            # A failed click must not mask the underlying challenge; fall through to screenshot+raise.
+            logger.debug(f"Could not click Cloudflare challenge checkbox for {url}: {exc}")
+            return
+
+        try:
+            # After the click Cloudflare validates and redirects, so wait for the real page to settle.
+            page.wait_for_load_state("networkidle", timeout=CLOAK_CHALLENGE_SETTLE_TIMEOUT_MS)
+        except playwright_timeout_error:
+            logger.debug(f"Timed out waiting for APKMirror to settle after clicking the challenge for {url}.")
+
+    @staticmethod
+    def _save_debug_screenshot(page: Any, url: str) -> Path | None:
+        """Best-effort full-page screenshot so a persisting Cloudflare challenge can be inspected after the fact."""
+        try:
+            CLOAK_DEBUG_SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+            screenshot_path = CLOAK_DEBUG_SCREENSHOT_DIR / f"{slugify(url)}-{uuid4().hex[:8]}.png"
+            page.screenshot(path=str(screenshot_path), full_page=True)
+        except Exception as exc:  # noqa: BLE001
+            # A screenshot failure must never mask the original Cloudflare/download error.
+            logger.warning(f"Failed to save CloakBrowser debug screenshot for {url}: {exc}")
+            return None
+        logger.info(f"Saved CloakBrowser debug screenshot to {screenshot_path}")
+        return screenshot_path
+
+    @staticmethod
     def _extract_source_with_cloak(url: str, cause: Exception | None = None) -> str:
         """Fetch APKMirror HTML through CloakBrowser when cloudscraper receives a challenge page."""
         launch_browser, playwright_timeout_error = ApkMirror._cloak_dependencies(url, cause)
         browser = launch_browser(args=CLOAK_BROWSER_ARGS)
+        screenshot_path: Path | None = None
         try:
             page = browser.new_page()
             # CloakBrowser owns the browser fingerprint, so partial header overrides would desync client hints.
@@ -75,11 +201,21 @@ class ApkMirror(Downloader):
             except playwright_timeout_error:
                 logger.debug(f"Timed out waiting for APKMirror network idle after CloakBrowser loaded {url}.")
             source = cast("str", page.content())
+            if ApkMirror._is_cloudflare_challenge(source):
+                # Interactive "Verify you are human" challenges need a click before Cloudflare hands off the real page.
+                logger.warning(f"APKMirror shows a Cloudflare challenge for {url}; attempting to click the checkbox.")
+                ApkMirror._attempt_challenge_click(page, url, playwright_timeout_error)
+                source = cast("str", page.content())
+            if ApkMirror._is_cloudflare_challenge(source):
+                # Capture the page while it's still open; the challenge screen is otherwise lost once we close.
+                screenshot_path = ApkMirror._save_debug_screenshot(page, url)
         finally:
             browser.close()
 
         if ApkMirror._is_cloudflare_challenge(source):
             msg = "APKMirror still returned a Cloudflare challenge after CloakBrowser loaded the page."
+            if screenshot_path:
+                msg += f" Screenshot saved to {screenshot_path}."
             raise APKMirrorAPKDownloadError(msg, url=url) from cause
         return source
 
@@ -100,6 +236,7 @@ class ApkMirror(Downloader):
         # Save into a unique partial path so failed browser downloads never poison the cache target.
         partial_path = target_path.with_name(f".{target_path.name}.{uuid4().hex}.part")
         browser = launch_browser(args=CLOAK_BROWSER_ARGS)
+        page = None
         try:
             page = browser.new_page()
             # The download endpoint validates navigation context; keep CloakBrowser's own UA and add only the referer.
@@ -110,6 +247,11 @@ class ApkMirror(Downloader):
                 page.wait_for_load_state("networkidle", timeout=CLOAK_NETWORK_IDLE_TIMEOUT_MS)
             except playwright_timeout_error:
                 logger.debug(f"Timed out waiting for APKMirror referer network idle before downloading {file_name}.")
+
+            if self._is_cloudflare_challenge(cast("str", page.content())):
+                # A challenged referer page can never yield the download, so solve the checkbox before triggering it.
+                logger.warning(f"APKMirror referer {referer} shows a Cloudflare challenge; attempting checkbox click.")
+                self._attempt_challenge_click(page, referer, playwright_timeout_error)
 
             with page.expect_download(timeout=CLOAK_REQUEST_TIMEOUT_MS) as download_info:
                 # Triggering a same-page anchor preserves browser download behavior better than raw HTTP.
@@ -127,7 +269,10 @@ class ApkMirror(Downloader):
             partial_path.replace(target_path)
         except Exception as exc:
             partial_path.unlink(missing_ok=True)
+            screenshot_path = self._save_debug_screenshot(page, referer) if page else None
             msg = f"Unable to download {file_name} from APKMirror with CloakBrowser."
+            if screenshot_path:
+                msg += f" Screenshot saved to {screenshot_path}."
             raise APKMirrorAPKDownloadError(msg, url=url) from exc
         finally:
             browser.close()
