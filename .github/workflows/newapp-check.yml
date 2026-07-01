@@ -16,7 +16,7 @@ permissions:
 jobs:
   status_check:
     if: github.repository == 'nikhilbadyal/docker-py-revanced'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       missing_apps: ${{ steps.status.outputs.missing_apps }}
     steps:
@@ -126,7 +126,7 @@ jobs:
   apkmirror_prs:
     needs: status_check
     if: github.repository == 'nikhilbadyal/docker-py-revanced' && needs.status_check.outputs.missing_apps != '' && needs.status_check.outputs.missing_apps != '[]'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: write
       issues: write

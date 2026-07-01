@@ -100,7 +100,7 @@ jobs:
 
   upload-to-github:
     name: GitHub Upload
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 30
     needs: build-apk
     if: inputs.GITHUB_UPLOAD
@@ -148,7 +148,7 @@ jobs:
   apprise-notifier:
     needs: build-apk
     name: Apprise Notifier
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: write
     timeout-minutes: 30
