@@ -33,7 +33,8 @@ on:
 
 jobs:
   build-apk:
-    permissions: write-all
+    permissions:
+      contents: write
     name: APK Build
     runs-on: self-hosted
     timeout-minutes: 60
