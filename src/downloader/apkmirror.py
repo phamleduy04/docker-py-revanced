@@ -1,12 +1,11 @@
 """Downloader Class."""
 
-from typing import Any, Self, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Self, cast
 from uuid import uuid4
 
 from bs4 import BeautifulSoup, Tag
 from loguru import logger
-
-from pathlib import Path
 
 from src.app import APP
 from src.downloader.download import Downloader
@@ -22,13 +21,14 @@ from src.utils import (
     slugify,
 )
 
+if TYPE_CHECKING:
+    from src.config import RevancedConfig
+
 # Screenshots land in the mounted resource folder so they survive the container and are reachable for debugging.
 CLOAK_DEBUG_SCREENSHOT_DIR = Path(resource_folder) / "debug-screenshots"
 
 # CloakBrowser runs inside the Docker container as root, so Chromium needs container-safe launch flags.
 CLOAK_BROWSER_ARGS = ["--no-sandbox", "--disable-dev-shm-usage"]
-# Waiting briefly after DOM load lets Cloudflare hand off to the real page without blocking forever on ads.
-CLOAK_NETWORK_IDLE_TIMEOUT_MS = 15_000
 # Playwright expects milliseconds while the rest of the downloader config stores request timeouts in seconds.
 CLOAK_REQUEST_TIMEOUT_MS = request_timeout * 1000
 # Cloudflare's interactive "Verify you are human" checkbox lives in a cross-origin iframe that needs a short wait.
@@ -65,6 +65,16 @@ CLOAK_CHALLENGE_MARKERS = (
 class ApkMirror(Downloader):
     """Files downloader."""
 
+    def __init__(self: Self, config: "RevancedConfig") -> None:
+        super().__init__(config)
+        # A single CloakBrowser page is reused across all steps so the Cloudflare clearance cookie persists and
+        # later navigations skip the challenge entirely instead of re-solving it per page.
+        self._cloak_browser: Any = None
+        self._cloak_page: Any = None
+        self._playwright_timeout_error: Any = None
+        # Once Cloudflare challenges this run, cloudscraper only wastes a round-trip, so route straight to CloakBrowser.
+        self._http_challenged = False
+
     @staticmethod
     def _is_cloudflare_challenge(source: str) -> bool:
         """Detect Cloudflare challenge HTML that can be returned with HTTP 200."""
@@ -90,12 +100,6 @@ class ApkMirror(Downloader):
         The managed challenge renders a hidden 0x0 orchestration iframe alongside the visible widget iframe, so
         candidates are filtered by a minimum clickable footprint instead of trusting the first DOM match.
         """
-        try:
-            # Wait until at least one challenge iframe is attached before measuring positions.
-            page.wait_for_selector(CLOAK_CHALLENGE_FRAME_SELECTOR, timeout=CLOAK_CHALLENGE_CLICK_TIMEOUT_MS)
-        except Exception:  # noqa: BLE001
-            logger.debug("No Cloudflare challenge iframe attached within the click timeout.")
-
         for selector in CLOAK_CHALLENGE_WIDGET_SELECTORS:
             try:
                 candidates = page.query_selector_all(selector)
@@ -149,6 +153,13 @@ class ApkMirror(Downloader):
         Cloudflare flags as a bot. We instead resolve the checkbox's full-frame pixel position -- OpenCV template
         matching first, DOM iframe geometry as fallback -- and drive `page.mouse` so the click looks human.
         """
+        try:
+            # Wait for the Turnstile widget to render before screenshotting for CV or measuring its DOM box.
+            page.wait_for_selector(CLOAK_CHALLENGE_FRAME_SELECTOR, timeout=CLOAK_CHALLENGE_CLICK_TIMEOUT_MS)
+        except Exception:  # noqa: BLE001
+            logger.debug(f"No Cloudflare challenge iframe rendered for {url}; challenge may not use a checkbox.")
+            return
+
         coordinates = ApkMirror._locate_checkbox_via_cv(page) or ApkMirror._locate_checkbox_via_dom(page)
         if coordinates is None:
             logger.debug(f"No Cloudflare Turnstile checkbox found to click for {url}.")
@@ -185,34 +196,47 @@ class ApkMirror(Downloader):
         logger.info(f"Saved CloakBrowser debug screenshot to {screenshot_path}")
         return screenshot_path
 
-    @staticmethod
-    def _extract_source_with_cloak(url: str, cause: Exception | None = None) -> str:
-        """Fetch APKMirror HTML through CloakBrowser when cloudscraper receives a challenge page."""
-        launch_browser, playwright_timeout_error = ApkMirror._cloak_dependencies(url, cause)
-        browser = launch_browser(args=CLOAK_BROWSER_ARGS)
-        screenshot_path: Path | None = None
-        try:
-            page = browser.new_page()
-            # CloakBrowser owns the browser fingerprint, so partial header overrides would desync client hints.
-            page.goto(url, wait_until="domcontentloaded", timeout=CLOAK_REQUEST_TIMEOUT_MS)
-            try:
-                # Cloudflare may finish after DOMContentLoaded; timeout here should not hide usable page HTML.
-                page.wait_for_load_state("networkidle", timeout=CLOAK_NETWORK_IDLE_TIMEOUT_MS)
-            except playwright_timeout_error:
-                logger.debug(f"Timed out waiting for APKMirror network idle after CloakBrowser loaded {url}.")
-            source = cast("str", page.content())
-            if ApkMirror._is_cloudflare_challenge(source):
-                # Interactive "Verify you are human" challenges need a click before Cloudflare hands off the real page.
-                logger.warning(f"APKMirror shows a Cloudflare challenge for {url}; attempting to click the checkbox.")
-                ApkMirror._attempt_challenge_click(page, url, playwright_timeout_error)
-                source = cast("str", page.content())
-            if ApkMirror._is_cloudflare_challenge(source):
-                # Capture the page while it's still open; the challenge screen is otherwise lost once we close.
-                screenshot_path = ApkMirror._save_debug_screenshot(page, url)
-        finally:
-            browser.close()
+    def _cloak_session_page(self: Self, url: str, cause: Exception | None = None) -> Any:
+        """Return the reusable CloakBrowser page, launching it once so Cloudflare clearance persists across steps."""
+        if self._cloak_page is not None:
+            return self._cloak_page
+        launch_browser, playwright_timeout_error = self._cloak_dependencies(url, cause)
+        self._playwright_timeout_error = playwright_timeout_error
+        self._cloak_browser = launch_browser(args=CLOAK_BROWSER_ARGS)
+        self._cloak_page = self._cloak_browser.new_page()
+        return self._cloak_page
 
-        if ApkMirror._is_cloudflare_challenge(source):
+    def _close_cloak_session(self: Self) -> None:
+        """Close the shared CloakBrowser session at the end of a download so no browser process leaks."""
+        if self._cloak_browser is not None:
+            try:
+                self._cloak_browser.close()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(f"Error closing CloakBrowser session: {exc}")
+        self._cloak_browser = None
+        self._cloak_page = None
+
+    def _solve_challenge_if_present(self: Self, page: Any, url: str, source: str) -> str:
+        """Click the Cloudflare checkbox when `source` is a challenge page and return the resulting HTML."""
+        if not self._is_cloudflare_challenge(source):
+            return source
+        # Interactive "Verify you are human" challenges need a click before Cloudflare hands off the real page.
+        logger.warning(f"APKMirror shows a Cloudflare challenge for {url}; attempting to click the checkbox.")
+        self._attempt_challenge_click(page, url, self._playwright_timeout_error)
+        return cast("str", page.content())
+
+    def _fetch_source_with_cloak(self: Self, url: str, cause: Exception | None = None) -> str:
+        """Fetch APKMirror HTML through the shared CloakBrowser page, solving a challenge only when one appears.
+
+        Cleared pages return immediately after DOMContentLoaded; the clearance cookie set by the first solved
+        challenge carries over on the reused page, so subsequent navigations never wait on the challenge path.
+        """
+        page = self._cloak_session_page(url, cause)
+        page.goto(url, wait_until="domcontentloaded", timeout=CLOAK_REQUEST_TIMEOUT_MS)
+        source = self._solve_challenge_if_present(page, url, cast("str", page.content()))
+
+        if self._is_cloudflare_challenge(source):
+            screenshot_path = self._save_debug_screenshot(page, url)
             msg = "APKMirror still returned a Cloudflare challenge after CloakBrowser loaded the page."
             if screenshot_path:
                 msg += f" Screenshot saved to {screenshot_path}."
@@ -231,27 +255,16 @@ class ApkMirror(Downloader):
             logger.debug(f"Skipping CloakBrowser download of {file_name} from {url}. Dry run is enabled.")
             return
 
-        launch_browser, playwright_timeout_error = self._cloak_dependencies(url, cause)
+        page = self._cloak_session_page(referer, cause)
         target_path = self.config.temp_folder.joinpath(file_name)
         # Save into a unique partial path so failed browser downloads never poison the cache target.
         partial_path = target_path.with_name(f".{target_path.name}.{uuid4().hex}.part")
-        browser = launch_browser(args=CLOAK_BROWSER_ARGS)
-        page = None
         try:
-            page = browser.new_page()
             # The download endpoint validates navigation context; keep CloakBrowser's own UA and add only the referer.
             page.set_extra_http_headers({"Referer": referer})
             page.goto(referer, wait_until="domcontentloaded", timeout=CLOAK_REQUEST_TIMEOUT_MS)
-            try:
-                # The referer page only needs to settle enough for cookies/challenges before triggering the file URL.
-                page.wait_for_load_state("networkidle", timeout=CLOAK_NETWORK_IDLE_TIMEOUT_MS)
-            except playwright_timeout_error:
-                logger.debug(f"Timed out waiting for APKMirror referer network idle before downloading {file_name}.")
-
-            if self._is_cloudflare_challenge(cast("str", page.content())):
-                # A challenged referer page can never yield the download, so solve the checkbox before triggering it.
-                logger.warning(f"APKMirror referer {referer} shows a Cloudflare challenge; attempting checkbox click.")
-                self._attempt_challenge_click(page, referer, playwright_timeout_error)
+            # Reusing the cleared session usually skips the challenge; solve it only if the referer is still gated.
+            self._solve_challenge_if_present(page, referer, cast("str", page.content()))
 
             with page.expect_download(timeout=CLOAK_REQUEST_TIMEOUT_MS) as download_info:
                 # Triggering a same-page anchor preserves browser download behavior better than raw HTTP.
@@ -269,13 +282,11 @@ class ApkMirror(Downloader):
             partial_path.replace(target_path)
         except Exception as exc:
             partial_path.unlink(missing_ok=True)
-            screenshot_path = self._save_debug_screenshot(page, referer) if page else None
+            screenshot_path = self._save_debug_screenshot(page, referer)
             msg = f"Unable to download {file_name} from APKMirror with CloakBrowser."
             if screenshot_path:
                 msg += f" Screenshot saved to {screenshot_path}."
             raise APKMirrorAPKDownloadError(msg, url=url) from exc
-        finally:
-            browser.close()
 
     @staticmethod
     def _select_download_extension(apk_type: str, *, preserve_bundle: bool) -> str:
@@ -459,26 +470,31 @@ class ApkMirror(Downloader):
         msg = f"Unable to find {app.app_name} version {version} on APKMirror"
         raise APKMirrorAPKDownloadError(msg, url=app.download_source)
 
-    @staticmethod
-    def _extract_source(url: str) -> str:
+    def _extract_source(self: Self, url: str) -> str:
         """Extracts the source from the url incase of reuse.
 
         Uses cloudscraper instead of plain requests because APKMirror is protected
         by Cloudflare. CloakBrowser is a heavier fallback for CAPTCHA/Turnstile
-        pages that cloudscraper can no longer solve.
+        pages that cloudscraper can no longer solve. Once a challenge is seen this run,
+        cloudscraper is skipped entirely so the cleared CloakBrowser session is reused directly.
         """
+        if self._http_challenged:
+            return self._fetch_source_with_cloak(url)
+
         response = apkmirror_scraper.get(url, timeout=request_timeout)
         try:
             # Non-200 challenge responses need the same browser fallback as HTTP 200 challenge pages.
             handle_request_response(response, url)
         except ScrapingError as exc:
             logger.warning(f"APKMirror HTTP fetch failed for {url}; retrying with CloakBrowser.")
-            return ApkMirror._extract_source_with_cloak(url, exc)
+            self._http_challenged = True
+            return self._fetch_source_with_cloak(url, exc)
         # cloudscraper's .text is typed as Any; cast to str to satisfy mypy
         source = cast("str", response.text)
-        if ApkMirror._is_cloudflare_challenge(source):
+        if self._is_cloudflare_challenge(source):
             logger.warning(f"APKMirror returned a Cloudflare challenge for {url}; retrying with CloakBrowser.")
-            return ApkMirror._extract_source_with_cloak(url)
+            self._http_challenged = True
+            return self._fetch_source_with_cloak(url)
         return source
 
     @staticmethod
@@ -499,20 +515,24 @@ class ApkMirror(Downloader):
         :param main_page: Version of the application to download
         :return: Version of downloaded apk
         """
-        if not main_page:
-            # APKMirror may rename app slugs independently from source paths, so resolve release URLs from listing HTML.
-            main_page = self._find_specific_version_page(app, version)
-        download_page = self.get_download_page(main_page)
-        if app.app_version == "latest":
-            try:
-                logger.info(f"Trying to guess {app.app_name} version.")
-                appsec_val = self._extracted_search_div(download_page, "appspec-value")
-                appsec_version = str(appsec_val.find(text=lambda text: "Version" in text))
-                app.app_version = slugify(appsec_version.rsplit(":", maxsplit=1)[-1].strip())
-                logger.info(f"Guessed {app.app_version} for {app.app_name}")
-            except ScrapingError:
-                pass
-        return self.extract_download_link_for_app(download_page, app)
+        try:
+            if not main_page:
+                # APKMirror may rename app slugs independently from source paths, so resolve release URLs from HTML.
+                main_page = self._find_specific_version_page(app, version)
+            download_page = self.get_download_page(main_page)
+            if app.app_version == "latest":
+                try:
+                    logger.info(f"Trying to guess {app.app_name} version.")
+                    appsec_val = self._extracted_search_div(download_page, "appspec-value")
+                    appsec_version = str(appsec_val.find(text=lambda text: "Version" in text))
+                    app.app_version = slugify(appsec_version.rsplit(":", maxsplit=1)[-1].strip())
+                    logger.info(f"Guessed {app.app_version} for {app.app_name}")
+                except ScrapingError:
+                    pass
+            return self.extract_download_link_for_app(download_page, app)
+        finally:
+            # Release the shared CloakBrowser session once this app's full download chain has finished.
+            self._close_cloak_session()
 
     def latest_version(self: Self, app: APP, **kwargs: Any) -> tuple[str, str]:
         """Function to download whatever the latest version of app from apkmirror.
@@ -520,17 +540,22 @@ class ApkMirror(Downloader):
         :param app: Name of the application
         :return: Version of downloaded apk
         """
-        app_main_page = app.download_source
-        versions_div = self._extracted_search_div(app_main_page, "listWidget p-relative")
-        if versions_div is None:
-            # Without the listing widget there is no safe way to infer the latest APKMirror release.
-            msg = f"Unable to find APKMirror version list for {app.app_name}"
-            raise APKMirrorAPKDownloadError(msg, url=app_main_page)
-        app_rows = versions_div.find_all(class_="appRow")
-        version_urls = [
-            app_row.find(class_="downloadLink")["href"]
-            for app_row in app_rows
-            if "beta" not in app_row.find(class_="appRowTitle").get_text().lower()
-            and "alpha" not in app_row.find(class_="appRowTitle").get_text().lower()
-        ]
-        return self.specific_version(app, "latest", APK_MIRROR_BASE_URL + max(version_urls))
+        try:
+            app_main_page = app.download_source
+            versions_div = self._extracted_search_div(app_main_page, "listWidget p-relative")
+            if versions_div is None:
+                # Without the listing widget there is no safe way to infer the latest APKMirror release.
+                msg = f"Unable to find APKMirror version list for {app.app_name}"
+                raise APKMirrorAPKDownloadError(msg, url=app_main_page)
+            app_rows = versions_div.find_all(class_="appRow")
+            version_urls = [
+                app_row.find(class_="downloadLink")["href"]
+                for app_row in app_rows
+                if "beta" not in app_row.find(class_="appRowTitle").get_text().lower()
+                and "alpha" not in app_row.find(class_="appRowTitle").get_text().lower()
+            ]
+            # specific_version reuses the same session and closes it in its own finally on the happy path.
+            return self.specific_version(app, "latest", APK_MIRROR_BASE_URL + max(version_urls))
+        finally:
+            # Guard against leaking the session if the listing scrape raises before specific_version runs.
+            self._close_cloak_session()
