@@ -145,6 +145,8 @@ jobs:
     needs: build-apk
     name: Apprise Notifier
     runs-on: self-hosted
+    permissions:
+      contents: write
     timeout-minutes: 30
     if: inputs.APPRISE_NOTIFY
 
