@@ -50,7 +50,8 @@ jobs:
       SHOULD_BUILD: ${{ steps.should_build.outputs.SHOULD_BUILD }}
 
   build-release:
-    permissions: write-all
+    permissions:
+      contents: write
     needs: release-check
     uses: ./.github/workflows/build-apk.yml
     if: ${{ needs.release-check.outputs.SHOULD_BUILD }}
