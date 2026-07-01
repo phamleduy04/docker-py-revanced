@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ORG_APP_PARTS = 2
 APK_MIRROR_APP_EXISTS_URL = "https://www.apkmirror.com/wp-json/apkm/v1/app_exists/"
-DEFAULT_USER_AGENT = os.getenv("APKMIRROR_USER_AGENT", "nikhil")
+DEFAULT_USER_AGENT = os.getenv("APKMIRROR_USER_AGENT", "APKUpdater-v3.0.15")
 DEFAULT_BASIC_AUTH = os.getenv(
     "APKMIRROR_AUTH_BASIC",
     # base64("api-apkupdater:rm5rcfruUjKy04sMpyMPJXW8") as provided in the example

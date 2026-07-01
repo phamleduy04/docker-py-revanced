@@ -42,6 +42,12 @@ request_header = {
     "Authorization": "Basic YXBpLWFwa3VwZGF0ZXI6cm01cmNmcnVVakt5MDRzTXB5TVBKWFc4",
     "Content-Type": "application/json",
 }
+# Mirrors APKUpdater's ApkMirrorService headers exactly (the auth token is public, shared by all APKUpdater clients).
+apkmirror_api_header = {
+    "User-Agent": "APKUpdater-v3.0.15",
+    "Authorization": "Basic YXBpLWFwa3VwZGF0ZXI6cm01cmNmcnVVakt5MDRzTXB5TVBKWFc4",
+    "Content-Type": "application/json",
+}
 default_cli = "https://github.com/revanced/revanced-cli/releases/latest"
 # Prefer ReVanced's API-hosted patch bundle because it exposes the `.rvp` file directly without relying on
 # release pages whose asset metadata may be unavailable or may only contain source archives.
@@ -250,7 +256,7 @@ def apkmirror_status_check(package_name: str) -> Any:
         the response from the APKMirror API as a JSON object.
     """
     body = {"pnames": [package_name]}
-    response = requests.post(APK_MIRROR_APK_CHECK, json=body, headers=request_header, timeout=60)
+    response = requests.post(APK_MIRROR_APK_CHECK, json=body, headers=apkmirror_api_header, timeout=60)
     return response.json()
 
 
