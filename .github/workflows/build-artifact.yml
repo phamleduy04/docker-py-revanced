@@ -16,7 +16,7 @@ on:
       CI_TEST:
         required: false
         type: boolean
-        default: false
+        default: true
       COMMIT_CHANGELOG:
         type: boolean
         required: false
