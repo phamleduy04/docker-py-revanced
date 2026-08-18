@@ -117,8 +117,8 @@ CLI_PROFILES: Final[dict[str, dict[str, dict[str, str]]]] = {
             "PACKAGES": "-p",
             "PATCHES": "--patches",
             "PATCHES_POST": "",
-            # Morphe list commands share the same temp-path flag as patching and can run concurrently per app.
-            "TEMPORARY_FILES_PATH": "-t",
+            # Morphe exposes temporary-files-path for `patch`, but not for `list-patches`.
+            "TEMPORARY_FILES_PATH": "",
             "UNIVERSAL": "-u",
             "VERSIONS": "-v",
         },
@@ -140,7 +140,7 @@ CLI_PROFILES: Final[dict[str, dict[str, dict[str, str]]]] = {
             "OUTPUT": "-o",
             "PATCHES": "-p",
             "PATCHES_POST": "",
-            "PURGE": "--purge",
+            "PURGE": "",
             "RIP_LIB": "",
             "STRIPLIBS": "--striplibs",
             # Morphe otherwise uses `/app/morphe-temporary-files`, which parallel apps can delete mid-patch.

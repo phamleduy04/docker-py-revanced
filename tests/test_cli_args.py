@@ -17,7 +17,9 @@ class CliArgProfileTests(TestCase):
         list_patch_args, patch_args = merge_cli_arg_maps("morphe-cli", ("", ""))
 
         self.assertEqual("--continue-on-error", patch_args["CONTINUE_ON_ERROR"])
-        self.assertEqual("-t", list_patch_args["TEMPORARY_FILES_PATH"])
+        self.assertEqual("", patch_args["PURGE"])
+        # Morphe exposes temporary-files-path for patching, but not for list-patches.
+        self.assertEqual("", list_patch_args["TEMPORARY_FILES_PATH"])
         self.assertEqual("-t", patch_args["TEMPORARY_FILES_PATH"])
 
     def test_revanced_cli_profile_does_not_emit_morphe_only_flag(self: Self) -> None:

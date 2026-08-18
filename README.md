@@ -85,7 +85,7 @@ You can use any of the following methods to build.
 
 - 🫠Without Docker
 
-    1. Install Java >= 17
+    1. Install Java >= 21
     2. Install Python >= 3.11
     3. Create virtual environment
        ```
@@ -162,6 +162,20 @@ You can use any of the following methods to build.
 `**` - By default all patches for a given app are included.<br>
 `**` - Can be used to included universal patch.<br>
 `***` - Can be used for unavailable apps in the repository (unofficial apps).
+
+### Obtainium
+
+Optional integration with [Obtainium](https://github.com/ImranR98/Obtainium) so patched APKs can be installed and
+updated straight from your GitHub Releases. See [obtainium.md](obtainium.md) for setup steps, how it works, and
+full option details.
+
+| **Env Name**                                                                     |                       **Description**                        | **Default** |
+|:----------------------------------------------------------------------------------|:--------------------------------------------------------------:|:-------------|
+| [OBTAINIUM_EXPORT](obtainium.md#obtainium_export)                                 |            Generate per-app HTML sources for Obtainium         | False        |
+| [OBTAINIUM_GITHUB_TAG](obtainium.md#obtainium_github_tag)                         |         Release tag the generated links point to               | latest       |
+| [OBTAINIUM_SITE_EXPORT](obtainium.md#obtainium_site_export)                       |    Generate a one-click install site (`index.html` at branch root) | False  |
+| [OBTAINIUM_VERSION_EXTRACTION_REGEX](obtainium.md#obtainium_version_extraction_regex) | Regex used to extract app + patch version for display     | See docs     |
+| [OBTAINIUM_VERSION_MATCH_GROUP](obtainium.md#obtainium_version_match_group)       |         Match-group template used with the regex above         | `$1+$2`      |
 
 ## Note
 
@@ -305,6 +319,9 @@ You can use any of the following methods to build.
    ```dotenv
     PERSONAL_ACCESS_TOKEN=<PAT>
    ```
+   Alternatively, you can add a dedicated `PERSONAL_ACCESS_TOKEN` secret to the repo (`Settings` ->
+   `Secrets and variables` -> `Actions`) instead of embedding it in `ENVS`. It's used automatically unless
+   `ENVS` already sets `PERSONAL_ACCESS_TOKEN` to a non-empty value, in which case `ENVS` takes priority.
 7. <a id="global-resources"></a>You can provide Direct download to the resource to used for patching apps `.env` file
    or in `ENVS` in `GitHub secrets` (Recommended) in the format -
    ```dotenv
@@ -459,11 +476,17 @@ You can use any of the following methods to build.
 11. <a id="extra-files"></a>If you want to include any extra file to the Github upload. Set comma arguments
      in `.env` file or in `ENVS` in `GitHub secrets` (Recommended) in the format
     ```ini
+    # Exact filename match
     EXTRA_FILES=<url>@<appName>.apk
+
+    # Regex pattern match for dynamic/versioned asset names
+    EXTRA_FILES=<url>@/<regex-pattern>/
     ```
     Example:
     ```dotenv
      EXTRA_FILES=https://github.com/inotia00/mMicroG/releases/latest@mmicrog.apk
+     # Regex example matching versioned MicroG filenames:
+     EXTRA_FILES=https://github.com/microg/GmsCore/releases/latest@/com\.google\.android\.gms-\d+\.apk$/
     ```
 12. <a id="custom-exclude-patching"></a>If you want to exclude any patch. Set comma separated patch in `.env` file
     or in `ENVS` in `GitHub secrets` (Recommended) in the format
@@ -539,23 +562,3 @@ You can use any of the following methods to build.
     APPRISE_NOTIFICATION_BODY=What a great Body
     APPRISE_NOTIFICATION_TITLE=What a great title
     ```
-
-20. <a id="obtainium"></a>[Obtainium](https://github.com/ImranR98/Obtainium)<br>
-    We support generating HTML files for Obtainium to scrape and download the latest patched APKs directly from your GitHub Releases.
-    Enable this only when you are comfortable exposing a public APK discovery URL for your fork or self-hosted setup.
-    Add below envs in `.env` file or in `ENVS` in `GitHub secrets` (Recommended) in the format
-    ```ini
-    OBTAINIUM_EXPORT=true
-    ```
-    This will generate an `obtainium_sources/` folder in the `changelogs` branch containing HTML files (e.g., `youtube.html`).
-    You can then add the raw GitHub URL of these HTML files to Obtainium as an "HTML" source.
-    Example URL: `https://raw.githubusercontent.com/<user>/<repo>/changelogs/obtainium_sources/youtube.html`
-    Obtainium's HTML source can use the APK link hash as its release ID, so patch-only updates are detected through
-    the generated release asset name without requiring a custom version extraction regex.
-
-    **Optional Configuration**:
-    ```ini
-    OBTAINIUM_GITHUB_TAG=latest
-    ```
-    By default, links point to the `latest` release. If you want to link to a specific tag, set this variable.
-    > **Warning**: Ensure your CI workflow is configured to release with the exact tag you specify. The default CI uses dynamic timestamp-based tags.
