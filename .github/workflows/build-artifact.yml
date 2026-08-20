@@ -189,7 +189,7 @@ jobs:
 
       - name: Select changelog files
         id: changelog_files
-        if: ${{ inputs.COMMIT_CHANGELOG && !inputs.CI_TEST}}
+        if: ${{ inputs.COMMIT_CHANGELOG }}
         run: |
           # Add the optional site index only when generated so git never receives a missing pathspec.
           file_pattern='changelog.md changelog.json updates.json obtainium_sources/*'
@@ -199,7 +199,7 @@ jobs:
           echo "file_pattern=${file_pattern}" >> "$GITHUB_OUTPUT"
 
       - name: Commit Update file
-        if: ${{ inputs.COMMIT_CHANGELOG && !inputs.CI_TEST}}
+        if: ${{ inputs.COMMIT_CHANGELOG }}
         uses: stefanzweifel/git-auto-commit-action@master
         with:
           branch: changelogs
