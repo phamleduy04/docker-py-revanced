@@ -4,9 +4,7 @@
 *venv
 *.pyc
 **cache**
-changelog.md
 .idea
-*.json
 status.md
 *.zip
 apks/*
