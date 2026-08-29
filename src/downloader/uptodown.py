@@ -1,6 +1,6 @@
 """Upto Down Downloader."""
 
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -16,7 +16,10 @@ from src.downloader.cloak import (
 )
 from src.downloader.download import Downloader
 from src.exceptions import UptoDownAPKDownloadError
-from src.utils import bs4_parser, handle_request_response, request_header, request_timeout
+from src.utils import bs4_parser, handle_request_response, request_header, request_timeout, status_code_200
+
+if TYPE_CHECKING:
+    from src.config import RevancedConfig
 
 # Uptodown's download button carries the app/file IDs its own JavaScript posts to the token endpoint.
 UPTODOWN_DOWNLOAD_BUTTON_SELECTOR = "#detail-download-button"
@@ -26,10 +29,20 @@ UPTODOWN_DOWNLOAD_URL_ENDPOINT_MARKER = "/download-url"
 UPTODOWN_TOKEN_TIMEOUT_MS = 90_000
 # Bound the click itself so a button that never becomes actionable fails fast instead of eating the token budget.
 UPTODOWN_CLICK_TIMEOUT_MS = 30_000
+# Markers that prove a real Uptodown page was served rather than a block page or Cloudflare interstitial.
+UPTODOWN_DOWNLOAD_BUTTON_MARKER = 'id="detail-download-button"'
+UPTODOWN_APP_NAME_MARKER = 'id="detail-app-name"'
 
 
 class UptoDown(Downloader):
     """Files downloader."""
+
+    def __init__(self: Self, config: "RevancedConfig") -> None:
+        super().__init__(config)
+        # One CloakBrowser session serves every step of a download so a cleared page is reused instead of relaunched.
+        self._cloak_browser: Any = None
+        self._cloak_page: Any = None
+        self._playwright_timeout_error: Any = None
 
     @staticmethod
     def _is_xapk_variant_page(page: str) -> bool:
@@ -67,6 +80,57 @@ class UptoDown(Downloader):
             msg = "Uptodown needs a browser to resolve its download token, but CloakBrowser is not installed."
             raise UptoDownAPKDownloadError(msg, url=page) from exc
 
+    def _cloak_session_page(self: Self, url: str) -> Any:
+        """Return the reusable CloakBrowser page, launching the browser only on first use."""
+        if self._cloak_page is not None:
+            return self._cloak_page
+        launch_browser, self._playwright_timeout_error = self._cloak_dependencies(url)
+        # The first launch downloads CloakBrowser's Chromium (~200 MB) into its cache, which takes minutes.
+        logger.debug("Launching CloakBrowser.")
+        self._cloak_browser = launch_browser(args=CLOAK_BROWSER_ARGS)
+        self._cloak_page = self._cloak_browser.new_page()
+        return self._cloak_page
+
+    def _close_cloak_session(self: Self) -> None:
+        """Close the shared CloakBrowser session once a download finishes so no browser process leaks."""
+        if self._cloak_browser is not None:
+            logger.debug("Closing CloakBrowser.")
+            try:
+                self._cloak_browser.close()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(f"Error closing CloakBrowser session: {exc}")
+        self._cloak_browser = None
+        self._cloak_page = None
+
+    def _page_source(self: Self, url: str, app: str, required_marker: str) -> str:
+        """Return Uptodown HTML, retrying through CloakBrowser when the plain request is blocked or challenged.
+
+        Datacenter IPs (CI runners in particular) get served an error or interstitial page instead of the app page,
+        which used to surface as a bogus "version not found" because the missing markup was never distinguished
+        from a genuinely absent app.
+        """
+        response = requests.get(url, headers=request_header, allow_redirects=True, timeout=request_timeout)
+        if response.status_code == status_code_200 and required_marker in response.text:
+            return str(response.text)
+
+        logger.warning(
+            f"Uptodown served no `{required_marker}` for {url} (HTTP {response.status_code}); "
+            "retrying with CloakBrowser.",
+        )
+        browser_page = self._cloak_session_page(url)
+        try:
+            browser_page.goto(url, wait_until="domcontentloaded", timeout=CLOAK_REQUEST_TIMEOUT_MS)
+            source = str(browser_page.content())
+        except Exception as exc:
+            msg = f"Unable to load {url} for {app} from uptodown. {exc}"
+            raise UptoDownAPKDownloadError(msg, url=url) from exc
+
+        if required_marker not in source:
+            # An interactive challenge can gate the page, so solve it once before giving up on the markup.
+            attempt_challenge_click(browser_page, url, self._playwright_timeout_error)
+            source = str(browser_page.content())
+        return source
+
     @staticmethod
     def _request_download_url(browser_page: Any, timeout_ms: int) -> Any:
         """Click the download button and return the token endpoint's response."""
@@ -90,33 +154,25 @@ class UptoDown(Downloader):
         the real page is the only way to obtain it, so the click is made in CloakBrowser and the response read back.
         """
         logger.debug(f"Resolving uptodown download token for {app} with CloakBrowser.")
-        launch_browser, playwright_timeout_error = self._cloak_dependencies(page)
-        # The first launch downloads CloakBrowser's Chromium (~200 MB) into its cache, which takes minutes.
-        logger.debug("Launching CloakBrowser.")
-        browser = launch_browser(args=CLOAK_BROWSER_ARGS)
-        browser_page = None
+        browser_page = self._cloak_session_page(page)
         try:
-            browser_page = browser.new_page()
             logger.debug(f"Loading {page} in CloakBrowser.")
             browser_page.goto(page, wait_until="domcontentloaded", timeout=CLOAK_REQUEST_TIMEOUT_MS)
             logger.debug(f"Loaded {page}.")
             try:
                 payload = self._request_download_url(browser_page, UPTODOWN_TOKEN_TIMEOUT_MS).json()
-            except playwright_timeout_error:
+            except self._playwright_timeout_error:
                 # Silence here usually means Turnstile escalated to the interactive checkbox, so solve it and retry.
                 logger.warning(f"Uptodown withheld the download token for {app}; trying the Cloudflare checkbox.")
-                attempt_challenge_click(browser_page, page, playwright_timeout_error)
+                attempt_challenge_click(browser_page, page, self._playwright_timeout_error)
                 payload = self._request_download_url(browser_page, UPTODOWN_TOKEN_TIMEOUT_MS).json()
         except Exception as exc:
             msg = f"Unable to resolve uptodown download token for {app}. {exc}"
             # A screenshot is the only way to tell a stuck Turnstile apart from changed markup after an unattended run.
-            screenshot_path = save_debug_screenshot(browser_page, page) if browser_page else None
+            screenshot_path = save_debug_screenshot(browser_page, page)
             if screenshot_path:
                 msg += f" Screenshot saved to {screenshot_path}."
             raise UptoDownAPKDownloadError(msg, url=page) from exc
-        finally:
-            logger.debug("Closing CloakBrowser.")
-            browser.close()
 
         token = payload.get("data", {}).get("downloadURL")
         if not token:
@@ -126,9 +182,7 @@ class UptoDown(Downloader):
 
     def extract_download_link(self: Self, page: str, app: str) -> tuple[str, str]:
         """Extract download link from uptodown url."""
-        r = requests.get(page, headers=request_header, allow_redirects=True, timeout=request_timeout)
-        handle_request_response(r, page)
-        soup = BeautifulSoup(r.text, bs4_parser)
+        soup = BeautifulSoup(self._page_source(page, app, UPTODOWN_DOWNLOAD_BUTTON_MARKER), bs4_parser)
         detail_download_button = soup.find("button", id="detail-download-button")
 
         if not isinstance(detail_download_button, Tag):
@@ -166,14 +220,21 @@ class UptoDown(Downloader):
         :param version: Version of the application to download
         :return: Version of downloaded apk
         """
+        try:
+            return self._specific_version(app, version)
+        finally:
+            # Release the shared browser session once this app's full download chain has finished.
+            self._close_cloak_session()
+
+    def _specific_version(self: Self, app: APP, version: str) -> tuple[str, str]:
+        """Resolve and download the requested version while the caller owns the browser session lifetime."""
         logger.debug("downloading specified version of app from uptodown.")
         url = f"{app.download_source}/versions"
-        html = requests.get(url, headers=request_header, timeout=request_timeout).text
-        soup = BeautifulSoup(html, bs4_parser)
+        soup = BeautifulSoup(self._page_source(url, app.app_name, UPTODOWN_APP_NAME_MARKER), bs4_parser)
         detail_app_name = soup.find("h1", id="detail-app-name")
 
         if not isinstance(detail_app_name, Tag):
-            msg = f"Unable to download {app} from uptodown."
+            msg = f"Unable to read the uptodown version list for {app.app_name}."
             raise UptoDownAPKDownloadError(msg, url=url)
 
         app_code = detail_app_name.get("data-code")
@@ -206,7 +267,7 @@ class UptoDown(Downloader):
             version_page += 1
 
         if download_url is None:
-            msg = f"Unable to download {app.app_name} from uptodown."
+            msg = f"Unable to find {app.app_name} version {version} on uptodown."
             raise UptoDownAPKDownloadError(msg, url=url)
 
         return self.extract_download_link(download_url, app.app_name)
@@ -215,4 +276,8 @@ class UptoDown(Downloader):
         """Function to download the latest version of app from uptodown."""
         logger.debug("downloading latest version of app from uptodown.")
         page = f"{app.download_source}/download"
-        return self.extract_download_link(page, app.app_name)
+        try:
+            return self.extract_download_link(page, app.app_name)
+        finally:
+            # Release the shared browser session once this app's full download chain has finished.
+            self._close_cloak_session()
