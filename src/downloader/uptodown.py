@@ -16,7 +16,7 @@ from src.downloader.cloak import (
 )
 from src.downloader.download import Downloader
 from src.exceptions import UptoDownAPKDownloadError
-from src.utils import bs4_parser, handle_request_response, request_header, request_timeout, status_code_200
+from src.utils import bs4_parser, request_header, request_timeout, status_code_200
 
 if TYPE_CHECKING:
     from src.config import RevancedConfig
@@ -131,6 +131,34 @@ class UptoDown(Downloader):
             source = str(browser_page.content())
         return source
 
+    def _versions_payload(self: Self, versions_url: str, referer_page: str) -> dict[str, Any]:
+        """Return one page of Uptodown's version list, reading it through the browser when the API refuses us.
+
+        The version list lives on the same host as the app page, so an IP that gets blocked for the HTML is blocked
+        for the JSON too. Fetching from inside the cleared page reuses the browser's cookies and origin.
+        """
+        response = requests.get(versions_url, headers=request_header, timeout=request_timeout)
+        if response.status_code == status_code_200:
+            return dict(response.json())
+
+        logger.warning(
+            f"Uptodown refused the version list at {versions_url} (HTTP {response.status_code}); "
+            "retrying with CloakBrowser.",
+        )
+        browser_page = self._cloak_session_page(versions_url)
+        # Same-origin is required for the page's own credentials, so land on the app page before fetching.
+        browser_page.goto(referer_page, wait_until="domcontentloaded", timeout=CLOAK_REQUEST_TIMEOUT_MS)
+        payload = browser_page.evaluate(
+            """async ([url, authorization]) => {
+                const response = await fetch(url, {
+                    headers: { Authorization: authorization, "Content-Type": "application/json" },
+                });
+                return response.json();
+            }""",
+            [versions_url, request_header["Authorization"]],
+        )
+        return dict(payload or {})
+
     @staticmethod
     def _request_download_url(browser_page: Any, timeout_ms: int) -> Any:
         """Click the download button and return the token endpoint's response."""
@@ -244,9 +272,7 @@ class UptoDown(Downloader):
 
         while not version_found:
             version_url = f"{app.download_source}/apps/{app_code}/versions/{version_page}"
-            r = requests.get(version_url, headers=request_header, timeout=request_timeout)
-            handle_request_response(r, version_url)
-            json = r.json()
+            json = self._versions_payload(version_url, url)
 
             if "data" not in json:
                 break

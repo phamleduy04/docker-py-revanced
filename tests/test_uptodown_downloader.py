@@ -17,6 +17,7 @@ from src.utils import request_header, request_timeout
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from src.app import APP
     from src.config import RevancedConfig
 
 
@@ -27,12 +28,17 @@ class _FakeTimeoutError(Exception):
 class _CloakPage:
     """Browser page double that answers the Turnstile-gated token request Uptodown makes on click."""
 
-    def __init__(self: Self, payload: dict[str, Any], *, silent_attempts: int = 0) -> None:
-        """Record the token payload plus how many clicks Turnstile swallows before answering."""
+    def __init__(self: Self, payload: dict[str, Any], *, silent_attempts: int = 0, page_content: str = "") -> None:
+        """Record the token payload, the HTML the browser serves, and how many clicks Turnstile swallows."""
         self.payload = payload
         self.silent_attempts = silent_attempts
+        self.page_content = page_content
         self.visited: str | None = None
         self.clicks: list[str] = []
+
+    def content(self: Self) -> str:
+        """Return the HTML a real browser session sees when the plain request was blocked."""
+        return self.page_content
 
     def goto(self: Self, url: str, **_kwargs: object) -> None:
         """Record the navigated page because the token is only issued from the real download page."""
@@ -55,6 +61,10 @@ class _CloakPage:
             self.silent_attempts -= 1
             raise _FakeTimeoutError
 
+    def evaluate(self: Self, _script: str, _args: object = None) -> Any:
+        """Return the version-list payload a same-origin fetch would produce inside the cleared page."""
+        return self.payload
+
     def click(self: Self, selector: str, **_kwargs: object) -> None:
         """Record every clicked selector because only the download button starts the token exchange."""
         self.clicks.append(selector)
@@ -63,10 +73,10 @@ class _CloakPage:
 class _CloakBrowser:
     """Browser double that records closure while exposing one page instance."""
 
-    def __init__(self: Self, payload: dict[str, Any], *, silent_attempts: int = 0) -> None:
+    def __init__(self: Self, payload: dict[str, Any], *, silent_attempts: int = 0, page_content: str = "") -> None:
         """Create state used to verify token resolution and cleanup."""
         self.closed = False
-        self.page = _CloakPage(payload, silent_attempts=silent_attempts)
+        self.page = _CloakPage(payload, silent_attempts=silent_attempts, page_content=page_content)
 
     def new_page(self: Self) -> _CloakPage:
         """Return the fake page used by the token fallback."""
@@ -184,6 +194,77 @@ class UptodownDownloaderTests(TestCase):
             timeout=request_timeout,
         )
 
+    def test_blocked_html_falls_back_to_the_browser_instead_of_reporting_a_missing_app(self: Self) -> None:
+        """CI runners get served block pages, which must not be mistaken for an app that has no such page."""
+        real_page = """
+            <button id="detail-download-button" class="button download"
+                    data-url="wanderlog-token">
+                Download 153.41 MB free
+            </button>
+        """
+        browser = _CloakBrowser({}, page_content=real_page)
+        downloader = UptoDown(_config())
+
+        with (
+            patch(
+                "src.downloader.uptodown.requests.get",
+                return_value=_UptodownResponse(status_code=403, text="<html>Access denied</html>"),
+            ),
+            patch.object(UptoDown, "_cloak_dependencies", return_value=_cloak_dependencies(browser)),
+            patch.object(downloader, "_download"),
+        ):
+            file_name, download_url = downloader.extract_download_link(
+                "https://wanderlog.en.uptodown.com/android/download/1183684099-x",
+                "WANDERLOG",
+            )
+
+        self.assertEqual("WANDERLOG.xapk", file_name)
+        self.assertEqual("https://dw.uptodown.com/dwn/wanderlog-token", download_url)
+        self.assertEqual("https://wanderlog.en.uptodown.com/android/download/1183684099-x", browser.page.visited)
+
+    def test_blocked_version_list_is_read_through_the_browser(self: Self) -> None:
+        """The version JSON shares the app's host, so a blocked runner must read it from the cleared page."""
+        versions_page = """<h1 id="detail-app-name" data-code="1286063">Wanderlog</h1>"""
+        payload = {
+            "data": [
+                {
+                    "version": "2.208",
+                    "versionURL": {
+                        "url": "https://wanderlog.en.uptodown.com/android",
+                        "extraURL": "download",
+                        "versionID": 1183684099,
+                    },
+                },
+            ],
+        }
+        browser = _CloakBrowser(payload, page_content=versions_page)
+        downloader = UptoDown(_config())
+        app = cast(
+            "APP",
+            SimpleNamespace(
+                app_name="WANDERLOG",
+                app_version="2.208",
+                download_source="https://wanderlog.en.uptodown.com/android",
+            ),
+        )
+
+        with (
+            patch(
+                "src.downloader.uptodown.requests.get",
+                return_value=_UptodownResponse(status_code=403, text="<html>Access denied</html>"),
+            ),
+            patch.object(UptoDown, "_cloak_dependencies", return_value=_cloak_dependencies(browser)),
+            patch.object(downloader, "extract_download_link", return_value=("WANDERLOG.xapk", "https://dl")) as link,
+        ):
+            downloader.specific_version(app, "2.208")
+
+        link.assert_called_once_with(
+            "https://wanderlog.en.uptodown.com/android/download/1183684099",
+            "WANDERLOG",
+        )
+        # The public entry point owns the session lifetime, so the browser must not outlive the download.
+        self.assertTrue(browser.closed)
+
     def test_version_page_without_token_replaces_file_id_instead_of_nesting_it(self: Self) -> None:
         """Version pages already carry a file ID, so the variant URL must replace it rather than append to it."""
         version_page = """
@@ -246,6 +327,9 @@ class UptodownDownloaderTests(TestCase):
         self.assertEqual("https://dw.uptodown.com/dwn/wanderlog-signed-token", download_url)
         self.assertEqual("https://wanderlog.en.uptodown.com/android/download/1183684099-x", browser.page.visited)
         self.assertEqual(["#detail-download-button"], browser.page.clicks)
+        # The session stays open for the rest of the download chain and is closed by the public entry point.
+        self.assertFalse(browser.closed)
+        downloader._close_cloak_session()
         self.assertTrue(browser.closed)
         download.assert_called_once_with(
             "https://dw.uptodown.com/dwn/wanderlog-signed-token",
@@ -271,6 +355,7 @@ class UptodownDownloaderTests(TestCase):
         challenge_click.assert_called_once()
         # The button is clicked once per attempt, so a solved checkbox must be followed by a second click.
         self.assertEqual(["#detail-download-button", "#detail-download-button"], browser.page.clicks)
+        downloader._close_cloak_session()
         self.assertTrue(browser.closed)
 
     def test_browser_token_failure_reports_the_page_that_withheld_it(self: Self) -> None:
@@ -287,6 +372,7 @@ class UptodownDownloaderTests(TestCase):
                 "WANDERLOG",
             )
 
+        downloader._close_cloak_session()
         self.assertTrue(browser.closed)
 
     def test_plain_apk_download_page_keeps_apk_extension(self: Self) -> None:
