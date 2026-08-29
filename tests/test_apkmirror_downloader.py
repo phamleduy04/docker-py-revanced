@@ -87,29 +87,50 @@ class APKMirrorDownloaderTests(TestCase):
         """HTTP challenge failures should be retried through CloakBrowser instead of failing immediately."""
         response = _APKMirrorResponse(status_code=403, text="<title>Just a moment...</title>")
 
-        with (
-            patch("src.downloader.apkmirror.apkmirror_scraper.get", return_value=response),
-            patch.object(ApkMirror, "_extract_source_with_cloak", return_value="<html>real app page</html>") as cloak,
-        ):
-            source = ApkMirror._extract_source("https://www.apkmirror.com/apk/example/app/")
+        with TemporaryDirectory() as tmp_dir:
+            downloader = ApkMirror(_config(Path(tmp_dir)))
+            with (
+                patch("src.downloader.apkmirror.apkmirror_scraper.get", return_value=response),
+                patch.object(downloader, "_fetch_source_with_cloak", return_value="<html>real app page</html>") as cloak,
+            ):
+                source = downloader._extract_source("https://www.apkmirror.com/apk/example/app/")
 
         self.assertEqual("<html>real app page</html>", source)
         cloak.assert_called_once()
+        # A seen challenge should latch so later steps skip cloudscraper and reuse the cleared CloakBrowser session.
+        self.assertTrue(downloader._http_challenged)
 
     def test_extract_source_uses_cloak_when_cloudscraper_gets_challenge_html(self: Self) -> None:
         """Cloudflare can return challenge markup with HTTP 200, so body markers must trigger fallback."""
         response = _APKMirrorResponse(status_code=200, text="<html>Checking your browser before access</html>")
 
-        with (
-            patch("src.downloader.apkmirror.apkmirror_scraper.get", return_value=response),
-            patch.object(ApkMirror, "_extract_source_with_cloak", return_value="<html>real app page</html>") as cloak,
-        ):
-            source = ApkMirror._extract_source("https://www.apkmirror.com/apk/example/app/")
+        with TemporaryDirectory() as tmp_dir:
+            downloader = ApkMirror(_config(Path(tmp_dir)))
+            with (
+                patch("src.downloader.apkmirror.apkmirror_scraper.get", return_value=response),
+                patch.object(downloader, "_fetch_source_with_cloak", return_value="<html>real app page</html>") as cloak,
+            ):
+                source = downloader._extract_source("https://www.apkmirror.com/apk/example/app/")
 
         self.assertEqual("<html>real app page</html>", source)
         cloak.assert_called_once_with("https://www.apkmirror.com/apk/example/app/")
 
-    def test_extract_source_with_cloak_keeps_cloakbrowser_user_agent(self: Self) -> None:
+    def test_extract_source_skips_cloudscraper_once_challenged(self: Self) -> None:
+        """After the first challenge latches the run, cloudscraper must not be hit again for later steps."""
+        with TemporaryDirectory() as tmp_dir:
+            downloader = ApkMirror(_config(Path(tmp_dir)))
+            downloader._http_challenged = True
+            with (
+                patch("src.downloader.apkmirror.apkmirror_scraper.get") as scraper_get,
+                patch.object(downloader, "_fetch_source_with_cloak", return_value="<html>real app page</html>") as cloak,
+            ):
+                source = downloader._extract_source("https://www.apkmirror.com/apk/example/app/")
+
+        self.assertEqual("<html>real app page</html>", source)
+        scraper_get.assert_not_called()
+        cloak.assert_called_once_with("https://www.apkmirror.com/apk/example/app/")
+
+    def test_fetch_source_with_cloak_keeps_cloakbrowser_user_agent(self: Self) -> None:
         """CloakBrowser should keep a coherent browser fingerprint instead of receiving a forced UA header."""
         browser = _CloakBrowser()
 
@@ -117,8 +138,13 @@ class APKMirrorDownloaderTests(TestCase):
             """Return the fake browser while accepting the real launch options."""
             return browser
 
-        with patch.object(ApkMirror, "_cloak_dependencies", return_value=(launch_browser, TimeoutError)):
-            source = ApkMirror._extract_source_with_cloak("https://www.apkmirror.com/apk/example/app/")
+        with TemporaryDirectory() as tmp_dir:
+            downloader = ApkMirror(_config(Path(tmp_dir)))
+            with patch.object(ApkMirror, "_cloak_dependencies", return_value=(launch_browser, TimeoutError)):
+                source = downloader._fetch_source_with_cloak("https://www.apkmirror.com/apk/example/app/")
+                # The session is reused across steps, so the browser stays open until the run explicitly closes it.
+                self.assertFalse(browser.closed)
+                downloader._close_cloak_session()
 
         self.assertEqual("<html>real app page</html>", source)
         self.assertTrue(browser.closed)
@@ -222,6 +248,122 @@ class APKMirrorDownloaderTests(TestCase):
         )
         self.assertEqual("TWITTER_PIKO.apkm", file_name)
         self.assertEqual("https://example.test/download.php?id=1", download_url)
+
+    def test_find_specific_version_reads_rows_that_dropped_the_download_link_class(self: Self) -> None:
+        """APKMirror removed `downloadLink` from listing rows, leaving the release URL only on the title anchors."""
+        # Mirrors the current markup: a comment anchor, the title anchor, and an info anchor share the release URL.
+        listing_page = """
+            <div class="listWidget p-relative">
+                <div class="appRow">
+                    <a href="/apk/truebill/truebill/rocket-money-bills-budgets-15-5-0-release/#disqus_thread"></a>
+                    <h5 class="appRowTitle">
+                        <a class="fontBlack" href="/apk/truebill/truebill/rocket-money-bills-budgets-15-5-0-release/">
+                            Rocket Money - Bills &amp; Budgets 15.5.0
+                        </a>
+                    </h5>
+                </div>
+                <div class="appRow">
+                    <a href="/apk/truebill/truebill/rocket-money-bills-budgets-13-15-0-release/#disqus_thread"></a>
+                    <h5 class="appRowTitle">
+                        <a class="fontBlack" href="/apk/truebill/truebill/rocket-money-bills-budgets-13-15-0-release/">
+                            Rocket Money - Bills &amp; Budgets 13.15.0
+                        </a>
+                    </h5>
+                    <a class="infoLink" href="/apk/truebill/truebill/rocket-money-bills-budgets-13-15-0-release/"></a>
+                </div>
+            </div>
+        """
+        app = cast(
+            "APP",
+            SimpleNamespace(
+                app_name="ROCKETMONEY",
+                app_version="13.15.0",
+                download_source="https://www.apkmirror.com/apk/truebill/truebill/",
+                effective_cli_argsf="revanced-cli",
+            ),
+        )
+
+        with TemporaryDirectory() as tmp_dir:
+            downloader = ApkMirror(_config(Path(tmp_dir)))
+            # The guessed slug is built from the source path (`truebill-`), so it misses this title-derived slug.
+            with patch.object(
+                downloader,
+                "_extract_source",
+                side_effect=[ScrapingError("404 not found"), listing_page],
+            ):
+                result = downloader._find_specific_version_page(app, "13.15.0")
+
+        self.assertEqual(
+            "https://www.apkmirror.com/apk/truebill/truebill/rocket-money-bills-budgets-13-15-0-release/",
+            result,
+        )
+
+    def test_latest_version_skips_rows_without_a_release_link(self: Self) -> None:
+        """Rows that carry no release URL must be skipped rather than crashing the latest-version scan."""
+        listing_page = """
+            <div class="listWidget p-relative">
+                <div class="appRow">
+                    <h5 class="appRowTitle">Rocket Money - Bills &amp; Budgets 15.9.0 beta</h5>
+                    <a class="fontBlack" href="/apk/truebill/truebill/rocket-money-bills-budgets-15-9-0-release/"></a>
+                </div>
+                <div class="appRow">
+                    <h5 class="appRowTitle">Rocket Money - Bills &amp; Budgets 15.6.0</h5>
+                </div>
+                <div class="appRow">
+                    <h5 class="appRowTitle">Rocket Money - Bills &amp; Budgets 15.5.0</h5>
+                    <a class="fontBlack" href="/apk/truebill/truebill/rocket-money-bills-budgets-15-5-0-release/"></a>
+                </div>
+            </div>
+        """
+        app = cast(
+            "APP",
+            SimpleNamespace(
+                app_name="ROCKETMONEY",
+                app_version="latest",
+                download_source="https://www.apkmirror.com/apk/truebill/truebill/",
+                effective_cli_argsf="revanced-cli",
+            ),
+        )
+
+        with TemporaryDirectory() as tmp_dir:
+            downloader = ApkMirror(_config(Path(tmp_dir)))
+            with (
+                patch.object(downloader, "_extract_source", return_value=listing_page),
+                patch.object(downloader, "specific_version", return_value=("ROCKETMONEY.apk", "https://dl")) as pick,
+            ):
+                downloader.latest_version(app)
+
+        # The beta row and the linkless row are both ignored, leaving the newest stable release.
+        pick.assert_called_once_with(
+            app,
+            "latest",
+            "https://www.apkmirror.com/apk/truebill/truebill/rocket-money-bills-budgets-15-5-0-release/",
+        )
+
+    def test_latest_version_reports_when_no_release_links_remain(self: Self) -> None:
+        """A listing whose markup changed again should name the problem instead of failing inside max()."""
+        listing_page = """
+            <div class="listWidget p-relative">
+                <div class="appRow"><h5 class="appRowTitle">Rocket Money 15.5.0</h5></div>
+            </div>
+        """
+        app = cast(
+            "APP",
+            SimpleNamespace(
+                app_name="ROCKETMONEY",
+                app_version="latest",
+                download_source="https://www.apkmirror.com/apk/truebill/truebill/",
+                effective_cli_argsf="revanced-cli",
+            ),
+        )
+
+        with TemporaryDirectory() as tmp_dir:
+            downloader = ApkMirror(_config(Path(tmp_dir)))
+            with (
+                patch.object(downloader, "_extract_source", return_value=listing_page),
+                self.assertRaisesRegex(APKMirrorAPKDownloadError, "release links"),
+            ):
+                downloader.latest_version(app)
 
     def test_get_download_page_rejects_missing_release_table(self: Self) -> None:
         """A normal APKMirror 404 page should fail as a download error instead of a NoneType parser crash."""

@@ -1,6 +1,5 @@
 """Downloader Class."""
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self, cast
 from uuid import uuid4
 
@@ -8,6 +7,13 @@ from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
 from src.app import APP
+from src.downloader.cloak import (
+    CLOAK_BROWSER_ARGS,
+    CLOAK_REQUEST_TIMEOUT_MS,
+    attempt_challenge_click,
+    load_browser_dependencies,
+    save_debug_screenshot,
+)
 from src.downloader.download import Downloader
 from src.downloader.sources import APK_MIRROR_BASE_URL
 from src.exceptions import APKMirrorAPKDownloadError, ScrapingError
@@ -17,37 +23,14 @@ from src.utils import (
     contains_any_word,
     handle_request_response,
     request_timeout,
-    resource_folder,
     slugify,
 )
 
 if TYPE_CHECKING:
     from src.config import RevancedConfig
 
-# Screenshots land in the mounted resource folder so they survive the container and are reachable for debugging.
-CLOAK_DEBUG_SCREENSHOT_DIR = Path(resource_folder) / "debug-screenshots"
-
-# CloakBrowser runs inside the Docker container as root, so Chromium needs container-safe launch flags.
-CLOAK_BROWSER_ARGS = ["--no-sandbox", "--disable-dev-shm-usage"]
-# Playwright expects milliseconds while the rest of the downloader config stores request timeouts in seconds.
-CLOAK_REQUEST_TIMEOUT_MS = request_timeout * 1000
-# Cloudflare's interactive "Verify you are human" checkbox lives in a cross-origin iframe that needs a short wait.
-CLOAK_CHALLENGE_CLICK_TIMEOUT_MS = 10_000
-# After clicking the checkbox, Cloudflare validates and redirects; give it room before declaring the challenge unsolved.
-CLOAK_CHALLENGE_SETTLE_TIMEOUT_MS = 20_000
-# Cloudflare Turnstile renders its checkbox inside these iframes; we click via the iframe's on-page bounding box.
-CLOAK_CHALLENGE_FRAME_SELECTOR = "iframe[src*='challenges.cloudflare.com'], iframe[src*='turnstile']"
-# Selectors that may hold the on-page checkbox: the full-page interstitial exposes the challenge iframe, while
-# embedded widgets also expose the `.cf-turnstile` div. The managed page renders BOTH a hidden 0x0 orchestration
-# iframe and the visible widget iframe, so candidates are filtered by size rather than trusting the first match.
-CLOAK_CHALLENGE_WIDGET_SELECTORS = (CLOAK_CHALLENGE_FRAME_SELECTOR, ".cf-turnstile")
-# Minimum clickable footprint (CSS px) that separates the real Turnstile widget from the hidden orchestration iframe.
-CLOAK_CHALLENGE_MIN_WIDGET_WIDTH = 50
-CLOAK_CHALLENGE_MIN_WIDGET_HEIGHT = 30
-# The checkbox sits near the left edge of the widget; offset inward so the click lands on it, not the border.
-CLOAK_CHALLENGE_CHECKBOX_X_OFFSET = 30
-# Move the pointer in several steps instead of teleporting so the cursor path resembles a human before clicking.
-CLOAK_CHALLENGE_MOUSE_STEPS = 12
+# Listing rows link to release pages whose URL always ends in `-release/`, which outlives APKMirror's class renames.
+APK_MIRROR_RELEASE_HREF_MARKER = "-release/"
 # APKMirror sometimes returns challenge HTML with HTTP 200, so the body needs explicit marker detection.
 CLOAK_CHALLENGE_MARKERS = (
     "attention required",
@@ -85,116 +68,10 @@ class ApkMirror(Downloader):
     def _cloak_dependencies(url: str, cause: Exception | None = None) -> tuple[Any, Any]:
         """Load CloakBrowser lazily so non-APKMirror flows do not require a browser import."""
         try:
-            from cloakbrowser import launch  # noqa: PLC0415
-            from playwright.sync_api import TimeoutError as PlaywrightTimeoutError  # noqa: PLC0415
+            return load_browser_dependencies()
         except ImportError as exc:
             msg = "APKMirror returned a Cloudflare challenge, but CloakBrowser is not installed."
             raise APKMirrorAPKDownloadError(msg, url=url) from (cause or exc)
-
-        return launch, PlaywrightTimeoutError
-
-    @staticmethod
-    def _locate_challenge_widget(page: Any) -> Any:
-        """Return the on-page Turnstile element whose bounding box positions the "Verify you are human" checkbox.
-
-        The managed challenge renders a hidden 0x0 orchestration iframe alongside the visible widget iframe, so
-        candidates are filtered by a minimum clickable footprint instead of trusting the first DOM match.
-        """
-        for selector in CLOAK_CHALLENGE_WIDGET_SELECTORS:
-            try:
-                candidates = page.query_selector_all(selector)
-            except Exception:  # noqa: BLE001
-                continue
-            for element in candidates:
-                box = element.bounding_box()
-                if (
-                    box
-                    and box["width"] >= CLOAK_CHALLENGE_MIN_WIDGET_WIDTH
-                    and box["height"] >= CLOAK_CHALLENGE_MIN_WIDGET_HEIGHT
-                ):
-                    logger.debug(f"Selected Turnstile widget via '{selector}' with box {box}.")
-                    return element
-        return None
-
-    @staticmethod
-    def _locate_checkbox_via_cv(page: Any) -> tuple[float, float] | None:
-        """Locate the checkbox by pixels via OpenCV template matching against a full-page screenshot."""
-        try:
-            # Import lazily so non-APKMirror flows never pay the OpenCV/numpy import cost.
-            from src.downloader.turnstile_cv import locate_checkbox  # noqa: PLC0415
-
-            point = locate_checkbox(page.screenshot(full_page=True))
-        except Exception as exc:  # noqa: BLE001
-            # CV is a best-effort locator; any failure falls back to DOM geometry rather than aborting the click.
-            logger.debug(f"Turnstile CV locate failed: {exc}")
-            return None
-        if point is None:
-            return None
-        return float(point.x), float(point.y)
-
-    @staticmethod
-    def _locate_checkbox_via_dom(page: Any) -> tuple[float, float] | None:
-        """Locate the checkbox from the widget iframe's on-page bounding box as a fallback to CV."""
-        widget = ApkMirror._locate_challenge_widget(page)
-        if widget is None:
-            return None
-        box = widget.bounding_box()
-        if not box:
-            return None
-        # The checkbox sits at the left of the widget, vertically centered.
-        return box["x"] + CLOAK_CHALLENGE_CHECKBOX_X_OFFSET, box["y"] + box["height"] / 2
-
-    @staticmethod
-    def _attempt_challenge_click(page: Any, url: str, playwright_timeout_error: Any) -> None:
-        """Click Cloudflare's "Verify you are human" checkbox using real main-frame mouse coordinates.
-
-        The checkbox lives in a cross-origin iframe behind a closed shadow root, so Playwright locators cannot reach
-        it, and `frame_locator().click()` dispatches a CDP click relative to the iframe (screenX/screenY < 100) that
-        Cloudflare flags as a bot. We instead resolve the checkbox's full-frame pixel position -- OpenCV template
-        matching first, DOM iframe geometry as fallback -- and drive `page.mouse` so the click looks human.
-        """
-        try:
-            # Wait for the Turnstile widget to render before screenshotting for CV or measuring its DOM box.
-            page.wait_for_selector(CLOAK_CHALLENGE_FRAME_SELECTOR, timeout=CLOAK_CHALLENGE_CLICK_TIMEOUT_MS)
-        except Exception:  # noqa: BLE001
-            logger.debug(f"No Cloudflare challenge iframe rendered for {url}; challenge may not use a checkbox.")
-            return
-
-        coordinates = ApkMirror._locate_checkbox_via_cv(page) or ApkMirror._locate_checkbox_via_dom(page)
-        if coordinates is None:
-            logger.debug(f"No Cloudflare Turnstile checkbox found to click for {url}.")
-            return
-
-        click_x, click_y = coordinates
-        try:
-            # Move (in steps) then click on the main frame so screenX/screenY look human rather than iframe-relative.
-            page.mouse.move(click_x, click_y, steps=CLOAK_CHALLENGE_MOUSE_STEPS)
-            page.mouse.click(click_x, click_y)
-            logger.info(f"Clicked Cloudflare checkbox for {url} at ({click_x:.0f}, {click_y:.0f}).")
-        except Exception as exc:  # noqa: BLE001
-            # A failed click must not mask the underlying challenge; fall through to screenshot+raise.
-            logger.debug(f"Could not click Cloudflare challenge checkbox for {url}: {exc}")
-            return
-
-        try:
-            # After the click Cloudflare validates and redirects, so wait for the real page to settle.
-            page.wait_for_load_state("networkidle", timeout=CLOAK_CHALLENGE_SETTLE_TIMEOUT_MS)
-        except playwright_timeout_error:
-            logger.debug(f"Timed out waiting for APKMirror to settle after clicking the challenge for {url}.")
-
-    @staticmethod
-    def _save_debug_screenshot(page: Any, url: str) -> Path | None:
-        """Best-effort full-page screenshot so a persisting Cloudflare challenge can be inspected after the fact."""
-        try:
-            CLOAK_DEBUG_SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-            screenshot_path = CLOAK_DEBUG_SCREENSHOT_DIR / f"{slugify(url)}-{uuid4().hex[:8]}.png"
-            page.screenshot(path=str(screenshot_path), full_page=True)
-        except Exception as exc:  # noqa: BLE001
-            # A screenshot failure must never mask the original Cloudflare/download error.
-            logger.warning(f"Failed to save CloakBrowser debug screenshot for {url}: {exc}")
-            return None
-        logger.info(f"Saved CloakBrowser debug screenshot to {screenshot_path}")
-        return screenshot_path
 
     def _cloak_session_page(self: Self, url: str, cause: Exception | None = None) -> Any:
         """Return the reusable CloakBrowser page, launching it once so Cloudflare clearance persists across steps."""
@@ -222,7 +99,7 @@ class ApkMirror(Downloader):
             return source
         # Interactive "Verify you are human" challenges need a click before Cloudflare hands off the real page.
         logger.warning(f"APKMirror shows a Cloudflare challenge for {url}; attempting to click the checkbox.")
-        self._attempt_challenge_click(page, url, self._playwright_timeout_error)
+        attempt_challenge_click(page, url, self._playwright_timeout_error)
         return cast("str", page.content())
 
     def _fetch_source_with_cloak(self: Self, url: str, cause: Exception | None = None) -> str:
@@ -236,7 +113,7 @@ class ApkMirror(Downloader):
         source = self._solve_challenge_if_present(page, url, cast("str", page.content()))
 
         if self._is_cloudflare_challenge(source):
-            screenshot_path = self._save_debug_screenshot(page, url)
+            screenshot_path = save_debug_screenshot(page, url)
             msg = "APKMirror still returned a Cloudflare challenge after CloakBrowser loaded the page."
             if screenshot_path:
                 msg += f" Screenshot saved to {screenshot_path}."
@@ -282,7 +159,7 @@ class ApkMirror(Downloader):
             partial_path.replace(target_path)
         except Exception as exc:
             partial_path.unlink(missing_ok=True)
-            screenshot_path = self._save_debug_screenshot(page, referer)
+            screenshot_path = save_debug_screenshot(page, referer)
             msg = f"Unable to download {file_name} from APKMirror with CloakBrowser."
             if screenshot_path:
                 msg += f" Screenshot saved to {screenshot_path}."
@@ -406,6 +283,20 @@ class ApkMirror(Downloader):
         raise APKMirrorAPKDownloadError(msg, url=main_page)
 
     @staticmethod
+    def _release_link_from_row(app_row: Tag) -> str | None:
+        """Return the release page href for one listing row.
+
+        APKMirror keeps renaming the row's link class (`downloadLink` is gone; the link now rides on `fontBlack`
+        and `infoLink`), so the release page is matched by URL shape instead. The comment anchor points at the same
+        release page with a `#disqus_thread` fragment and is skipped so the returned URL stays a clean page URL.
+        """
+        for anchor in app_row.find_all("a"):
+            href = anchor.get("href")
+            if isinstance(href, str) and APK_MIRROR_RELEASE_HREF_MARKER in href and "#" not in href:
+                return href
+        return None
+
+    @staticmethod
     def _version_matches_title(version: str, title: str) -> bool:
         """Return whether an APKMirror app-row title refers to the requested version."""
         if version in title:
@@ -461,11 +352,11 @@ class ApkMirror(Downloader):
         for app_row in versions_div.find_all(class_="appRow"):
             # APKMirror release slugs can differ from the app source slug, so links must come from the listing row.
             title = app_row.find(class_="appRowTitle")
-            download_link = app_row.find(class_="downloadLink")
-            if not title or not download_link or not download_link.get("href"):
+            release_link = self._release_link_from_row(app_row)
+            if not title or not release_link:
                 continue
             if self._version_matches_title(version, title.get_text(" ", strip=True)):
-                return f"{APK_MIRROR_BASE_URL}{download_link['href']}"
+                return f"{APK_MIRROR_BASE_URL}{release_link}"
 
         msg = f"Unable to find {app.app_name} version {version} on APKMirror"
         raise APKMirrorAPKDownloadError(msg, url=app.download_source)
@@ -547,13 +438,21 @@ class ApkMirror(Downloader):
                 # Without the listing widget there is no safe way to infer the latest APKMirror release.
                 msg = f"Unable to find APKMirror version list for {app.app_name}"
                 raise APKMirrorAPKDownloadError(msg, url=app_main_page)
-            app_rows = versions_div.find_all(class_="appRow")
-            version_urls = [
-                app_row.find(class_="downloadLink")["href"]
-                for app_row in app_rows
-                if "beta" not in app_row.find(class_="appRowTitle").get_text().lower()
-                and "alpha" not in app_row.find(class_="appRowTitle").get_text().lower()
-            ]
+            version_urls = []
+            for app_row in versions_div.find_all(class_="appRow"):
+                title = app_row.find(class_="appRowTitle")
+                release_link = self._release_link_from_row(app_row)
+                if not title or not release_link:
+                    continue
+                title_text = title.get_text().lower()
+                # Prerelease builds are not patchable targets, so they never qualify as the latest version.
+                if "beta" in title_text or "alpha" in title_text:
+                    continue
+                version_urls.append(release_link)
+            if not version_urls:
+                # An empty list means the listing markup changed again; say so instead of failing on max().
+                msg = f"Unable to find any APKMirror release links for {app.app_name}"
+                raise APKMirrorAPKDownloadError(msg, url=app_main_page)
             # specific_version reuses the same session and closes it in its own finally on the happy path.
             return self.specific_version(app, "latest", APK_MIRROR_BASE_URL + max(version_urls))
         finally:
