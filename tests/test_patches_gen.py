@@ -92,6 +92,18 @@ Compatible packages:
 """
 
 
+VERSION_CODES_SAMPLE = """INFO: Name: Dark mode
+Description: Force dark mode for Amazon Shopping.
+Enabled: false
+Compatible packages:
+\tPackage name: com.amazon.mShop.android.shopping
+\tCompatible versions:
+\t\t32.13.2.100
+\tVersion codes:
+\t\t32.13.2.100: ARM64_V8A=1241320216, ARMEABI_V7A=1241320216, X86_64=1241320216, X86=1241320216
+"""
+
+
 def _patch_by_name(patches: list[dict[Any, Any]], name: str) -> dict[Any, Any]:
     """Find patches by name so tests stay focused on parser behavior instead of list ordering."""
     return next(patch for patch in patches if patch["name"] == name)
@@ -105,6 +117,27 @@ class PatchesGenParserTests(TestCase):
         selected_version = Patches.select_recommended_version(["8.47.56", "7.29.52"])
 
         self.assertEqual("8.47.56", selected_version)
+
+    def test_version_codes_block_does_not_become_compatible_versions(self: Self) -> None:
+        """A `Version codes:` block follows the version list and must not be parsed as more compatible versions."""
+        patches = parse_text_to_json(VERSION_CODES_SAMPLE)
+        dark_mode = _patch_by_name(patches, "Dark mode")
+
+        self.assertEqual(["32.13.2.100"], dark_mode["compatiblePackages"][0]["versions"])
+
+    def test_recommended_version_ignores_architecture_version_codes(self: Self) -> None:
+        """Version codes outrank every real version once coerced numerically, so they must never be candidates."""
+        selected_version = Patches.select_recommended_version(
+            [
+                "32.13.2.100",
+                "Version",
+                "codes:",
+                "ARM64_V8A=1241320216,",
+                "X86=1241320216",
+            ],
+        )
+
+        self.assertEqual("32.13.2.100", selected_version)
 
     def test_recommended_version_falls_back_to_first_unparseable_version(self: Self) -> None:
         """Non-standard app versions should stay deterministic instead of crashing patch metadata parsing."""

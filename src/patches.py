@@ -204,6 +204,10 @@ class Patches(object):
     @staticmethod
     def _coerce_nonstandard_version(candidate: str) -> Version | None:
         """Convert suffix-heavy app versions into a comparable numeric version when possible."""
+        if not candidate[:1].isdigit():
+            # App versions start with a number, so labels and version-code entries such as `X86=1241320216` must not
+            # be coerced; doing so once made a version code outrank every real version and became the download target.
+            return None
         numeric_parts = re.findall(r"\d+", candidate)
         if not numeric_parts:
             # Versions without numeric groups cannot be ordered safely, so callers should keep the existing fallback.

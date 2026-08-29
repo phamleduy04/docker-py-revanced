@@ -1,11 +1,17 @@
 """Generate patches using cli."""
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
 from src.cli_args import DEFAULT_LIST_PATCHES_ARGS, append_cli_argument
+
+# CLI field labels are alphabetic words ending in a colon, while version values always start with a digit. Matching
+# the label shape stops a version list at the next field (such as Morphe's `Version codes:` block) instead of
+# swallowing it, which previously turned entries like `X86=1241320216` into candidate app versions.
+FIELD_LABEL_PATTERN = re.compile(r"^[A-Za-z][A-Za-z ]*:")
 
 # Patch fields are only section delimiters when they are emitted at column zero.
 PATCH_DESCRIPTION_STOP_LABELS = ("Enabled:", "Options:", "Compatible packages:")
@@ -44,6 +50,11 @@ def _has_label(line: str, label: str, *, top_level_only: bool) -> bool:
 def _field_value(line: str, label: str) -> str:
     """Extract a field value after the CLI label without preserving formatting indentation."""
     return line.lstrip().removeprefix(label).strip()
+
+
+def _starts_new_field(line: str) -> bool:
+    """Detect the next CLI field so a multi-line value stops instead of absorbing the following block."""
+    return bool(FIELD_LABEL_PATTERN.match(line.lstrip()))
 
 
 def _has_any_label(line: str, labels: tuple[str, ...], *, top_level_only: bool) -> bool:
@@ -180,14 +191,18 @@ def extract_package_info(package_section: str) -> dict[str, Any]:
 
     for line in lines[1:]:
         if _has_label(line, "Compatible versions:", top_level_only=False):
-            inline_versions = _field_value(line, "Compatible versions:")
-            if inline_versions:
-                versions.extend(inline_versions.split())
+            # An empty inline value splits to nothing, so the versions can be extended unconditionally.
+            versions.extend(_field_value(line, "Compatible versions:").split())
             collecting_versions = True
             continue
 
+        if _starts_new_field(line):
+            # Any other field ends the version list, including Morphe's `Version codes:` block.
+            collecting_versions = False
+            continue
+
         if collecting_versions:
-            versions.extend(line.strip().split())
+            versions.extend(line.split())
 
     return {"name": package_name, "versions": versions or None}
 
@@ -224,14 +239,18 @@ def extract_compatible_packages_from_section(section: str) -> list[dict[str, Any
             continue
 
         if _has_label(line, "Compatible versions:", top_level_only=False):
-            inline_versions = _field_value(line, "Compatible versions:")
-            if inline_versions:
-                current_versions.extend(inline_versions.split())
+            # An empty inline value splits to nothing, so the versions can be extended unconditionally.
+            current_versions.extend(_field_value(line, "Compatible versions:").split())
             collecting_versions = True
             continue
 
-        if collecting_versions and line.strip():
-            current_versions.extend(line.strip().split())
+        if _starts_new_field(line):
+            # Any other field ends the version list, including Morphe's `Version codes:` block.
+            collecting_versions = False
+            continue
+
+        if collecting_versions:
+            current_versions.extend(line.split())
 
     flush_package()
     return packages
