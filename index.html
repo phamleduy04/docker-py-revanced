@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obtainium Sources</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #f5f6f8;
+            --card-bg: #ffffff;
+            --text: #1a1a1a;
+            --muted: #5f6368;
+            --accent: #2f6fed;
+            --accent-text: #ffffff;
+            --border: #e2e4e8;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #16171a;
+                --card-bg: #212226;
+                --text: #f1f2f4;
+                --muted: #9aa0a6;
+                --accent: #6f9dff;
+                --accent-text: #0b0d10;
+                --border: #33353a;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 2rem 1rem 3rem;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        main { max-width: 640px; margin: 0 auto; }
+        h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+        p.intro { color: var(--muted); line-height: 1.5; margin-top: 0; }
+        p.intro a { color: var(--accent); text-decoration: none; }
+        p.intro a:hover { text-decoration: underline; }
+        ul { list-style: none; padding: 0; margin: 1.5rem 0 0; display: flex; flex-direction: column; gap: 0.75rem; }
+        .app-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
+        }
+        .app-header {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .app-name { font-weight: 600; overflow-wrap: anywhere; }
+        .package-name {
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-wrap: anywhere;
+        }
+        .app-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .meta-chip {
+            font-size: 0.78rem;
+            color: var(--muted);
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.15rem 0.6rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .app-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.2rem; }
+        .add-button {
+            flex-shrink: 0;
+            display: inline-block;
+            background: var(--accent);
+            color: var(--accent-text);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+        .add-button:hover { opacity: 0.9; }
+        .source-link {
+            font-size: 0.85rem;
+            color: var(--muted);
+            text-decoration: none;
+        }
+        .source-link:hover { color: var(--accent); text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Obtainium Sources</h1>
+        <p class="intro">
+            Tap a button below on an Android device with
+            <a href="https://github.com/ImranR98/Obtainium">Obtainium</a> installed to add that app as an update
+            source. Don't have it yet? Get it from the link above first.
+        </p>
+        <ul>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">reddit</span>
+                <code class="package-name">com.reddit.frontpage</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 2026.26.0..2626161</span>
+                <span class="meta-chip">Patch latest</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.reddit.frontpage%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Freddit.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22reddit%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22reddit%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/reddit.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">photos</span>
+                <code class="package-name">com.google.android.apps.photos</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App latest</span>
+                <span class="meta-chip">Patch v1.3.1</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.google.android.apps.photos%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Fphotos.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22photos%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22photos%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/photos.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">spotify</span>
+                <code class="package-name">com.spotify.music</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 9.1.60.1970</span>
+                <span class="meta-chip">Patch latest</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.spotify.music%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Fspotify.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22spotify%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22spotify%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/spotify.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">youtube_music</span>
+                <code class="package-name">com.google.android.apps.youtube.music</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 9.15.51</span>
+                <span class="meta-chip">Patch v1.42.0-dev.2</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.google.android.apps.youtube.music%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Fyoutube_music.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22youtube_music%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22youtube_music%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/youtube_music.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">youtube</span>
+                <code class="package-name">com.google.android.youtube</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 21.07.247</span>
+                <span class="meta-chip">Patch v1.42.0-dev.3</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.google.android.youtube%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Fyoutube.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22youtube%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22youtube%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/youtube.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">instagram</span>
+                <code class="package-name">com.instagram.android</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 435.0.0.37.76</span>
+                <span class="meta-chip">Patch v3.8.0-dev.2</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.instagram.android%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Finstagram.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22instagram%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22instagram%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/instagram.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">hevy</span>
+                <code class="package-name">com.hevy</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 3.1.0</span>
+                <span class="meta-chip">Patch v1.51.1</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.hevy%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Fhevy.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22hevy%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22hevy%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/hevy.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">alltrails</span>
+                <code class="package-name">com.alltrails.alltrails</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App latest</span>
+                <span class="meta-chip">Patch v1.43.0</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.alltrails.alltrails%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Falltrails.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22alltrails%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22alltrails%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/alltrails.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">rocketmoney</span>
+                <code class="package-name">com.truebill</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 13.15.0</span>
+                <span class="meta-chip">Patch v1.21.4</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.truebill%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Frocketmoney.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22rocketmoney%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22rocketmoney%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/rocketmoney.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">amazon</span>
+                <code class="package-name">com.amazon.mShop.android.shopping</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 32.13.2.100</span>
+                <span class="meta-chip">Patch v1.21.4</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.amazon.mShop.android.shopping%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Famazon.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22amazon%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22amazon%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/amazon.html">View source</a>
+            </div>
+        </li>
+        <li class="app-card">
+            <div class="app-header">
+                <span class="app-name">wanderlog</span>
+                <code class="package-name">com.wanderlog.android</code>
+            </div>
+            <div class="app-meta">
+                <span class="meta-chip">App 2.208</span>
+                <span class="meta-chip">Patch v1.51.1</span>
+            </div>
+            <div class="app-actions">
+                <a class="add-button" href="obtainium://app/%7B%22id%22%3A%22com.wanderlog.android%22%2C%22url%22%3A%22https%3A%2F%2Fraw.githubusercontent.com%2Fphamleduy04%2Fdocker-py-revanced%2Fchangelogs%2Fobtainium_sources%2Fwanderlog.html%22%2C%22author%22%3A%22phamleduy04%22%2C%22name%22%3A%22wanderlog%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22Version%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchVersion%5Bv%5D%3F%28%5B%5C%5C%5C%5Cw.%5D%2B%29-PatchSet%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%241%2B%242%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22wanderlog%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22phamleduy04%5C%22%2C%5C%22about%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3A%22HTML%22%7D">Add to Obtainium</a>
+                <a class="source-link" href="https://raw.githubusercontent.com/phamleduy04/docker-py-revanced/changelogs/obtainium_sources/wanderlog.html">View source</a>
+            </div>
+        </li>
+        </ul>
+    </main>
+</body>
+</html>
