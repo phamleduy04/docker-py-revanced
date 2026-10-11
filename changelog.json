@@ -1,1 +1,38 @@
-{}
+{
+    "MorpheApp/MicroG-RE": {
+        "ResourceName": "[MorpheApp/MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases/tag/7.2.1)",
+        "Version": "7.2.1",
+        "Changelog": "### Bug fixes\r\n\r\n* Normalize client_sig and callerSig to SHA-1 hex digest ( https://github.com/MorpheApp/MicroG-RE/pull/262 )\r\n* Rework the update dialogs, list row heights and the GCM status card ( https://github.com/MorpheApp/MicroG-RE/pull/269 )\r\n* Use TLS protocol version 1.2 for improved device compatibility (  https://github.com/MorpheApp/MicroG-RE/pull/273 )\r\n* Add armeabi-v7a builds, show warning for installations of arm64-v8a on 32-bit phone ROM ( https://github.com/MorpheApp/MicroG-RE/pull/274 )\r\n* Preserve local caller identity and support Google Maps location settings ( https://github.com/MorpheApp/MicroG-RE/pull/272 )\r\n* Restore incognito, device attestation and module resource handling ( https://github.com/MorpheApp/MicroG-RE/pull/289 )\r\n* Look up silent sign-in under the installed package ( https://github.com/MorpheApp/MicroG-RE/pull/290 )\r\n* Fix Spatula headers for notification registration ( https://github.com/MorpheApp/MicroG-RE/pull/293 )\r\n\r\n\r\n### Features\r\n* Sync upstream microG changes ( https://github.com/MorpheApp/MicroG-RE/pull/291 )\r\n\r\n**Full Changelog**: https://github.com/MorpheApp/MicroG-RE/compare/7.1.1...7.2.1",
+        "PublishedOn": "2026-10-04T10:02:40Z"
+    },
+    "REAndroid/APKEditor": {
+        "ResourceName": "[REAndroid/APKEditor](https://github.com/REAndroid/APKEditor/releases/tag/V1.4.9)",
+        "Version": "V1.4.9",
+        "Changelog": "## What's Changed\r\n* Fix: Merging issue #228 \r\n* Fix: Smali wide register handling #229 \r\n\r\n\r\n**Full Changelog**: https://github.com/REAndroid/APKEditor/compare/V1.4.8...V1.4.9",
+        "PublishedOn": "2026-05-19T11:25:01Z"
+    },
+    "MorpheApp/morphe-cli": {
+        "ResourceName": "[MorpheApp/morphe-cli](https://github.com/MorpheApp/morphe-desktop/releases/tag/v1.18.1)",
+        "Version": "v1.18.1",
+        "Changelog": "## [1.18.1](https://github.com/MorpheApp/morphe-desktop/compare/v1.18.0...v1.18.1) (2026-10-05)\r\n\r\n### Performance Improvements\r\n\r\n* Use multi-threaded file cleanup ([6976ee6](https://github.com/MorpheApp/morphe-desktop/commit/6976ee6795d316b93a9a9ab3b6e4e7637b4999a2))\r\n",
+        "PublishedOn": "2026-10-05T11:51:56Z"
+    },
+    "RookieEnough/De-Vanced": {
+        "ResourceName": "[RookieEnough/De-Vanced](https://github.com/RookieEnough/De-Vanced/releases/tag/v1.5.1)",
+        "Version": "v1.5.1",
+        "Changelog": "## [1.5.1](https://github.com/RookieEnough/De-Vanced/compare/v1.5.0...v1.5.1) (2026-10-04)\n\n### \ud83d\udc1b Bug Fixes\n\n* **Amazon Music:** Resolve app crash on startup ([114c5fc](https://github.com/RookieEnough/De-Vanced/commit/114c5fca44d634bf01f23bd58aac63eccd9120dd))\n",
+        "PublishedOn": "2026-10-04T10:21:11Z"
+    },
+    "rushiranpise/morphe-patches": {
+        "ResourceName": "[rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches/releases/tag/v1.22.0)",
+        "Version": "v1.22.0",
+        "Changelog": "## [1.22.0](https://github.com/rushiranpise/morphe-patches/compare/v1.21.5...v1.22.0) (2026-09-15)\n\n### \ud83d\udc1b Bug Fixes\n\n* build ([81207e1](https://github.com/rushiranpise/morphe-patches/commit/81207e12513860720ac4f56c90d582a0c7e008b6))\n* update few apps ([cf6ac31](https://github.com/rushiranpise/morphe-patches/commit/cf6ac31af3126935169fa7f3dae7fff56451416d))\n\n### \u2728 New Features\n\n* **google-photos:** add custom launcher branding ([e4f5e87](https://github.com/rushiranpise/morphe-patches/commit/e4f5e87e6afe0f04c257c78feccad66895bd106c))\n",
+        "PublishedOn": "2026-09-15T20:58:05Z"
+    },
+    "MorpheApp/morphe-patches": {
+        "ResourceName": "[MorpheApp/morphe-patches](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.47.0-dev.22)",
+        "Version": "v1.47.0-dev.22",
+        "Changelog": "## [1.47.0-dev.22](https://github.com/MorpheApp/morphe-patches/compare/v1.47.0-dev.21...v1.47.0-dev.22) (2026-10-10)\n\n### \u2728 New Features\n\n* **YouTube:** Add `Force system font` patch ([#3579](https://github.com/MorpheApp/morphe-patches/issues/3579)) ([3968284](https://github.com/MorpheApp/morphe-patches/commit/3968284900ab15a9d04575b359272759891d19c8))\n",
+        "PublishedOn": "2026-10-10T23:11:03Z"
+    }
+}
