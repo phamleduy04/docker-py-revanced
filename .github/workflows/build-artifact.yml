@@ -14,6 +14,8 @@ on:
         required: false
       PERSONAL_ACCESS_TOKEN:
         required: false
+      KEYSTORE_BASE64:
+        required: false
     inputs:
       CI_TEST:
         required: false
@@ -75,6 +77,24 @@ jobs:
         run: |
           echo "${{ secrets.DOCKER_PY_REVANCED_SECRETS }}" >> .env
           echo "Added envs"
+
+      - name: Write signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          # morphe-cli v2 aborts when the keystore is missing instead of generating one, and a fresh key per run
+          # would block in-place app updates, so the private key is restored from a secret on every build.
+          if [ -z "${KEYSTORE_BASE64}" ]; then
+            if [[ "${{ inputs.CI_TEST }}" =~ ^(true|True|1)$ ]]; then
+              # CI test builds are never released, so a throwaway key is enough to exercise signing.
+              keytool -genkeypair -noprompt -storetype PKCS12 -keystore apks/revanced.keystore -alias alias \
+                -storepass ReVanced -keypass ReVanced -keyalg RSA -keysize 2048 -validity 1 -dname "CN=CI Test"
+              exit 0
+            fi
+            echo "::error::KEYSTORE_BASE64 secret is not set; patched APKs cannot be signed."
+            exit 1
+          fi
+          printf '%s' "${KEYSTORE_BASE64}" | base64 --decode > apks/revanced.keystore
 
       - name: Setup python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
